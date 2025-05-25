@@ -21,7 +21,7 @@ export default function ConversationDetailsPage({ params }) {
       setError(null);
 
       // Carica i dettagli della conversazione
-      const convResponse = await fetch(`/api/conversations/${params.id}`);
+const convResponse = await fetch(`/api/conversations/${params.id}`);
       const convData = await convResponse.json();
 
       if (!convData.success) {
@@ -31,7 +31,7 @@ export default function ConversationDetailsPage({ params }) {
       setConversation(convData.conversation);
 
       // Carica i messaggi
-      const messagesResponse = await fetch(`/api/conversations/messages?conversationId=${params.id}`);
+const messagesResponse = await fetch(`/api/conversations/messages?conversationId=${params.id}`);
       const messagesData = await messagesResponse.json();
 
       if (!messagesData.success) {
@@ -41,7 +41,7 @@ export default function ConversationDetailsPage({ params }) {
       setMessages(messagesData.messages);
 
       // Carica gli errori
-      const errorsResponse = await fetch(`/api/conversations/errors?conversationId=${params.id}`);
+const errorsResponse = await fetch(`/api/conversations/errors?conversationId=${params.id}`);
       const errorsData = await errorsResponse.json();
 
       if (!errorsData.success) {
