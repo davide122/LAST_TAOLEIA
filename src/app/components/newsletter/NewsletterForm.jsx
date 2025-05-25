@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-const NewsletterForm = () => {
+function NewsletterFormInner() {
   const qs = useSearchParams();
   const token = qs.get("token");
 
@@ -89,6 +89,12 @@ const NewsletterForm = () => {
       </div>
     </div>
   );
-};
+}
 
-export default NewsletterForm;
+export default function NewsletterForm() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NewsletterFormInner />
+    </Suspense>
+  );
+}

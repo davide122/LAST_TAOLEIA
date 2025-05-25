@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import sql from "@/lib/db";
+import sql from "../../../../../../lib/db";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
