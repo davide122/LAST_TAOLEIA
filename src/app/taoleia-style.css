@@ -1,0 +1,248 @@
+/* Stile principale per TaoleiaChat */
+.app {
+  background-color:#0e3740 !important;
+  color: #F5EFE0;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.3s ease;
+}
+
+/* Sfondo sfocato */
+.sfocas {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.1;
+  z-index: -1;
+}
+
+/* Stile per il video player */
+.video-container {
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+}
+
+/* Messaggi */
+.message-user {
+  background-color: rgba(10, 59, 59, 0.9);
+  color: #F5EFE0;
+  border-radius: 1.2rem 1.2rem 0 1.2rem;
+  padding: 0.8rem 1.2rem;
+  max-width: 80%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  border: 1px solid rgba(245, 239, 224, 0.2);
+  transition: all 0.3s ease;
+}
+
+.message-assistant {
+  background-color: #F5EFE0;
+  color: #333;
+  border-radius: 1.2rem 1.2rem 1.2rem 0;
+  padding: 0.8rem 1.2rem;
+  max-width: 80%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+}
+
+/* Stile per le categorie cliccabili */
+.category-highlight {
+  color: #E3742E;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: all 0.2s ease;
+}
+
+.category-highlight:hover {
+  color: #c45e1f;
+  text-decoration: underline;
+}
+
+/* Input bar */
+.input-container {
+  background-color: rgba(10, 59, 59, 0.7);
+  border-radius: 1.5rem 1.5rem 0 0;
+  backdrop-filter: blur(10px);
+  padding: 1rem;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.input-field {
+  background-color: rgba(245, 239, 224, 0.9);
+  border: 1px solid rgba(10, 59, 59, 0.3);
+  border-radius: 2rem;
+  padding: 0.8rem 1.2rem;
+  color: #333;
+  width: 100%;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.input-field:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(10, 59, 59, 0.8);
+  background-color: #F5EFE0;
+}
+
+.send-button {
+  background-color: rgba(10, 59, 59, 0.9);
+  color: #F5EFE0;
+  border: 1px solid rgba(245, 239, 224, 0.3);
+  border-radius: 50%;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.send-button:hover {
+  background-color: rgba(10, 59, 59, 1);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Dropdown delle lingue */
+.language-dropdown {
+  position: relative;
+  z-index: 100;
+}
+
+.language-dropdown-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: rgba(10, 59, 59, 0.8);
+  border: 1px solid rgba(245, 239, 224, 0.3);
+  border-radius: 2rem;
+  padding: 0.5rem 1rem;
+  color: #F5EFE0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.language-dropdown-button:hover {
+  background-color: rgba(10, 59, 59, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.flag {
+  font-size: 1.2rem;
+}
+
+.dropdown-arrow {
+  font-size: 0.7rem;
+  margin-left: 0.3rem;
+}
+
+.language-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: #F5EFE0;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  overflow: hidden;
+  width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.language-option:hover {
+  background-color: rgba(227, 116, 46, 0.1);
+}
+
+.language-option.selected {
+  background-color: rgba(227, 116, 46, 0.2);
+  font-weight: 500;
+}
+
+/* Barra di navigazione */
+.nav-bar {
+  background-color: rgba(10, 59, 59, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 2rem;
+  margin: 0.5rem 1rem;
+  padding: 0.5rem;
+  display: flex;
+  justify-content: space-around;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.nav-button {
+  padding: 0.8rem;
+  border-radius: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.nav-button.active {
+  background-color: rgba(227, 116, 46, 0.3);
+}
+
+.nav-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Animazioni */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* Stili per la mappa */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.map-container {
+  height: calc(100vh - 64px);
+  width: 100%;
+  position: relative;
+}
+
+.map-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.category-filter {
+  margin-bottom: 10px;
+}
+
+.activity-list {
+  max-height: 300px;
+  overflow-y: auto;
+}

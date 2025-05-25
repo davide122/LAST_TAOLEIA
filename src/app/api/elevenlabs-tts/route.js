@@ -1,0 +1,65 @@
+import { NextResponse } from 'next/server';
+export const runtime = 'nodejs';
+
+export async function POST(req) {
+  try {
+    const { text, language = 'it' } = await req.json();
+    const key = process.env.ELEVENLABS_API_KEY;
+    
+    // Seleziona la voce in base alla lingua
+    let voiceId;
+    switch (language) {
+      case 'en':
+        voiceId = process.env.ELEVENLABS_VOICE_ID_EN || process.env.ELEVENLABS_VOICE_ID;
+        break;
+      case 'fr':
+        voiceId = process.env.ELEVENLABS_VOICE_ID_FR || process.env.ELEVENLABS_VOICE_ID;
+        break;
+      case 'es':
+        voiceId = process.env.ELEVENLABS_VOICE_ID_ES || process.env.ELEVENLABS_VOICE_ID;
+        break;
+      case 'de':
+        voiceId = process.env.ELEVENLABS_VOICE_ID_DE || process.env.ELEVENLABS_VOICE_ID;
+        break;
+      case 'it':
+      default:
+        voiceId = process.env.ELEVENLABS_VOICE_ID;
+        break;
+    }
+    
+    if (!key || !voiceId) throw new Error('Mancano ELEVENLABS_API_KEY o ELEVENLABS_VOICE_ID');
+
+    const elevenRes = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key':   key
+        },
+        body: JSON.stringify({
+          text,
+          model_id: 'eleven_turbo_v2_5',
+          stream:   false,
+        })
+      }
+    );
+    if (!elevenRes.ok) {
+      const txt = await elevenRes.text();
+      throw new Error(`ElevenLabs TTS error: ${elevenRes.status} – ${txt}`);
+    }
+
+    // Proxy del flusso audio
+    return new Response(elevenRes.body, {
+      headers: {
+        'Content-Type':                'audio/mpeg',
+        'Cache-Control':               'no-cache',
+        'Connection':                  'keep-alive',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
+  } catch (err) {
+    console.error('ElevenLabs TTS error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
