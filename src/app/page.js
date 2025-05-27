@@ -104,9 +104,6 @@ export default function TaoleiaChat() {
           // Utilizziamo il messaggio di benvenuto tradotto nella lingua selezionata
           const welcomeMessage = welcomeMessages[storedLanguage] || welcomeMessages.it;
           
-          // Aggiungi il messaggio di benvenuto all'UI come messaggio utente
-          setMessages(m => [...m, { role: 'user', content: welcomeMessage }]);
-          
           // Log del messaggio dell'utente
           if (conversationId) {
             await logMessage('user', welcomeMessage, {
