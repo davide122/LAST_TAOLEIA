@@ -809,7 +809,7 @@ export default function TaoleiaChat() {
       )}
 
       {/* Bottom nav arrotondata */}
-      <nav className="nav-bar">
+      {/* <nav className="nav-bar">
         
         <button 
           onClick={() => setActiveTab('location')} 
@@ -828,7 +828,7 @@ export default function TaoleiaChat() {
             className={`nav-icon ${activeTab === 'chat' ? 'text-[#E3742E]' : 'text-[#F5EFE0]'}`}
           />
         </button>
-      </nav>
+      </nav> */}
     </div>
   </div>
 );

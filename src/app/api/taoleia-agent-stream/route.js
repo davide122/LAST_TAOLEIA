@@ -167,6 +167,12 @@ ${message}`
                    
                   const result = await res.json();
 
+                  // Assicuriamoci che il risultato sia sempre un oggetto valido
+                  const toolOutput = {
+                    tool_call_id: call.id,
+                    output: JSON.stringify(result || { error: 'No results found' })
+                  };
+
                   // invia output a OpenAI
                   await fetch(
                     `https://api.openai.com/v1/threads/${tid}/runs/${event.id}/submit_tool_outputs`,
@@ -178,10 +184,7 @@ ${message}`
                         'OpenAI-Beta':   'assistants=v2'
                       },
                       body: JSON.stringify({
-                        tool_outputs: [{
-                          tool_call_id: call.id,
-                          output:       JSON.stringify(result)
-                        }]
+                        tool_outputs: [toolOutput]
                       })
                     }
                   );

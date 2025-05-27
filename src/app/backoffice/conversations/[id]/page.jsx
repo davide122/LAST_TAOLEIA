@@ -72,7 +72,7 @@ export default function ConversationDetailsPage({ params }) {
 
   useEffect(() => {
     if (conversationId) {
-      loadConversationDetails();
+    loadConversationDetails();
     }
   }, [conversationId]);
 
