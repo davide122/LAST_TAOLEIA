@@ -28,6 +28,7 @@ export default function TaoleiaChat() {
   const [threadId, setThreadId]     = useState(null);
   const [currentLanguage, setCurrentLanguage] = useState('it');
   const [mapKey, setMapKey] = useState(0);
+  const [categories, setCategories] = useState([]);
 
   const [isListeningChat, setIsListeningChat] = useState(false);
   const chatRecRef = useRef(null);
@@ -150,7 +151,23 @@ export default function TaoleiaChat() {
               try { obj = JSON.parse(data); }
               catch { continue; }
               if (obj.type === 'tool_call_result') {
-                setMessages(m => [...m, { role:'tool', data:obj.data }]);
+                // Gestione degli errori nelle function calls
+                if (obj.data && obj.data.error) {
+                  // Se c'è un errore nella function call, aggiungiamo un messaggio di errore
+                  setMessages(m => [...m, { 
+                    role: 'assistant', 
+                    content: `Mi dispiace, non sono riuscito a recuperare le informazioni richieste. ${obj.data.error}`
+                  }]);
+                } else if (obj.data && (!obj.data.name || !obj.data.description)) {
+                  // Se i dati sono incompleti o vuoti
+                  setMessages(m => [...m, { 
+                    role: 'assistant', 
+                    content: 'Mi dispiace, non sono riuscito a trovare informazioni dettagliate su questa attività.'
+                  }]);
+                } else {
+                  // Se tutto va bene, mostriamo la scheda dell'attività
+                  setMessages(m => [...m, { role: 'tool', data: obj.data }]);
+                }
                 continue;
               }
               if (obj.object==='thread.message.delta' && obj.delta?.content) {
@@ -457,71 +474,41 @@ export default function TaoleiaChat() {
     }
   };
 
-  // TTS streaming setup (migliorato per gestire le risorse)
-  const initAudio = () => {
-    // Pulizia delle risorse precedenti se esistono
-    if (audioInitRef.current) {
-      try {
-        if (audioElementRef.current) {
-          audioElementRef.current.pause();
-          audioElementRef.current.src = '';
-          URL.revokeObjectURL(audioElementRef.current.src);
-        }
-        if (mediaSourceRef.current) {
-          if (mediaSourceRef.current.readyState === 'open') {
-            mediaSourceRef.current.endOfStream();
-          }
-          // Attendiamo che il MediaSource sia effettivamente chiuso
-          mediaSourceRef.current = null;
-        }
-        sourceBufferRef.current = null;
-      } catch (err) {
-        console.error('Errore durante la pulizia delle risorse audio:', err);
-      }
-    }
-    
-    // Inizializzazione nuove risorse
-    const audio = new Audio();
-    audioElementRef.current = audio;
-    const ms = new MediaSource();
-    audio.src = URL.createObjectURL(ms);
-    ms.addEventListener('sourceopen', () => {
-      try {
-        if (ms.sourceBuffers.length === 0) {
-          sourceBufferRef.current = ms.addSourceBuffer('audio/mpeg');
-        }
-      } catch (err) {
-        console.error('Errore durante la creazione del SourceBuffer:', err);
-      }
-    });
-    audio.play().catch(() => {});
-    mediaSourceRef.current = ms;
-    audioInitRef.current = true;
-  };
-
-  // Gestione della riproduzione audio
-  const handleAudioPlayback = async (text) => {
+  // Funzione per gestire l'audio della chat
+  const handleChatAudio = async (text) => {
     if (!text.trim()) return;
     
     try {
-      // Fetch dell'audio
-      const res = await fetch('/api/elevenlabs-tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-      
-      if (!res.ok) {
-        throw new Error(`TTS fallito con stato ${res.status}`);
+      // Ferma e pulisce l'audio corrente se presente
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        if (audioRef.current.src) {
+          URL.revokeObjectURL(audioRef.current.src);
+        }
+        audioRef.current = null;
+        setIsAudioPlaying(false);
       }
 
       // Crea un nuovo elemento audio
       const audio = new Audio();
       audioRef.current = audio;
 
+      // Fetch dell'audio
+      const res = await fetch('/api/elevenlabs-tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      if (!res.ok) {
+        throw new Error(`TTS fallito con stato ${res.status}`);
+      }
+
       // Imposta la sorgente audio
       const blob = await res.blob();
-      audio.src = URL.createObjectURL(blob);
+      const audioUrl = URL.createObjectURL(blob);
+      audio.src = audioUrl;
 
       // Gestisci gli eventi di riproduzione
       audio.addEventListener('play', () => {
@@ -534,10 +521,20 @@ export default function TaoleiaChat() {
 
       audio.addEventListener('ended', () => {
         setIsAudioPlaying(false);
-        // Pulisci le risorse
         if (audioRef.current) {
           audioRef.current.src = '';
-          URL.revokeObjectURL(audioRef.current.src);
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+        }
+      });
+
+      audio.addEventListener('error', (e) => {
+        console.error('Errore durante la riproduzione audio:', e);
+        setIsAudioPlaying(false);
+        if (audioRef.current) {
+          audioRef.current.src = '';
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
         }
       });
 
@@ -547,10 +544,31 @@ export default function TaoleiaChat() {
     } catch (err) {
       console.error('Errore durante la riproduzione TTS:', err);
       setIsAudioPlaying(false);
+      if (audioRef.current) {
+        audioRef.current.src = '';
+        URL.revokeObjectURL(audioRef.current.src);
+        audioRef.current = null;
+      }
     }
   };
 
-  // Modifica la funzione sendMessage per utilizzare il nuovo sistema audio
+  // --- EFFECT: Inizializza le categorie ---
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch('/api/get-categories');
+        if (!res.ok) throw new Error('Failed to fetch categories');
+        const data = await res.json();
+        setCategories(data.categories || []);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Modifica la funzione sendMessage per utilizzare handleChatAudio
   const sendMessage = async (text = input) => {
     if (!text.trim()) return;
     
@@ -569,13 +587,24 @@ export default function TaoleiaChat() {
         });
       }
 
+      // Prepara il contesto per l'assistente usando le categorie già caricate
+      const context = {
+        language: currentLanguage,
+        categories: categories,
+        instructions: `You are a helpful assistant for Taormina tourism. Please respond in the same language as the user's message (${currentLanguage}). If the user asks about specific categories or activities, use the provided categories list to give relevant information.`
+      };
+
       const response = await fetch('/api/taoleia-agent-stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-selected-language': currentLanguage
         },
-        body: JSON.stringify({ message: text, threadId })
+        body: JSON.stringify({ 
+          message: text, 
+          threadId,
+          context 
+        })
       });
 
       if (!response.ok) throw new Error('Network response was not ok');
@@ -602,7 +631,37 @@ export default function TaoleiaChat() {
           try { obj = JSON.parse(data); }
           catch { continue; }
           if (obj.type === 'tool_call_result') {
-            setMessages(m => [...m, { role: 'tool', data: obj.data }]);
+            // Gestione degli errori nelle function calls
+            if (obj.data && obj.data.error) {
+              // Se c'è un errore nella function call, aggiungiamo un messaggio di errore
+              const errorMessage = `Mi dispiace, non sono riuscito a recuperare le informazioni richieste. ${obj.data.error}`;
+              setMessages(m => {
+                const newMessages = [...m];
+                // Rimuovi il messaggio dell'assistente vuoto
+                newMessages.pop();
+                // Aggiungi il messaggio di errore
+                newMessages.push({ role: 'assistant', content: errorMessage });
+                return newMessages;
+              });
+              // Aggiorna anche il testo completo per l'audio
+              full = errorMessage;
+            } else if (obj.data && (!obj.data.name || !obj.data.description)) {
+              // Se i dati sono incompleti o vuoti
+              const errorMessage = 'Mi dispiace, non sono riuscito a trovare informazioni dettagliate su questa attività.';
+              setMessages(m => {
+                const newMessages = [...m];
+                // Rimuovi il messaggio dell'assistente vuoto
+                newMessages.pop();
+                // Aggiungi il messaggio di errore
+                newMessages.push({ role: 'assistant', content: errorMessage });
+                return newMessages;
+              });
+              // Aggiorna anche il testo completo per l'audio
+              full = errorMessage;
+            } else {
+              // Se tutto va bene, mostriamo la scheda dell'attività
+              setMessages(m => [...m, { role: 'tool', data: obj.data }]);
+            }
             continue;
           }
           if (obj.object === 'thread.message.delta' && obj.delta?.content) {
@@ -638,8 +697,8 @@ export default function TaoleiaChat() {
         });
       }
 
-      // Riproduci l'audio della risposta
-      await handleAudioPlayback(full);
+      // Riproduci l'audio della risposta usando handleChatAudio
+      await handleChatAudio(full);
 
     } catch (error) {
       console.error('Error:', error);
@@ -653,9 +712,8 @@ export default function TaoleiaChat() {
           language: currentLanguage
         });
       }
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   // --- RENDER JSX ---

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { FiArrowLeft, FiMessageSquare, FiAlertCircle, FiInfo, FiRefreshCw, FiFilter } from 'react-icons/fi';
 
 export default function ConversationDetailsPage({ params }) {
+  const unwrappedParams = use(params);
+  const conversationId = unwrappedParams.id;
+
   const [conversation, setConversation] = useState(null);
   const [messages, setMessages] = useState([]);
   const [errors, setErrors] = useState([]);
@@ -12,7 +15,7 @@ export default function ConversationDetailsPage({ params }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [filterRole, setFilterRole] = useState('all');
-  const [activeTab, setActiveTab] = useState('messages'); // 'messages' o 'errors'
+  const [activeTab, setActiveTab] = useState('messages');
 
   // Carica i dettagli della conversazione
   const loadConversationDetails = async () => {
@@ -21,34 +24,44 @@ export default function ConversationDetailsPage({ params }) {
       setError(null);
 
       // Carica i dettagli della conversazione
-const convResponse = await fetch(`/api/conversations/${params.id}`);
+      const convResponse = await fetch(`/api/conversations/${conversationId}`);
+      if (!convResponse.ok) {
+        throw new Error(`HTTP error! status: ${convResponse.status}`);
+      }
       const convData = await convResponse.json();
 
       if (!convData.success) {
-        throw new Error(convData.message);
+        throw new Error(convData.message || 'Failed to load conversation');
       }
 
       setConversation(convData.conversation);
 
       // Carica i messaggi
-const messagesResponse = await fetch(`/api/conversations/messages?conversationId=${params.id}`);
+      const messagesResponse = await fetch(`/api/conversations/messages?conversationId=${conversationId}`);
+      if (!messagesResponse.ok) {
+        throw new Error(`HTTP error! status: ${messagesResponse.status}`);
+      }
       const messagesData = await messagesResponse.json();
 
       if (!messagesData.success) {
-        throw new Error(messagesData.message);
+        throw new Error(messagesData.message || 'Failed to load messages');
       }
 
       setMessages(messagesData.messages);
 
       // Carica gli errori
-const errorsResponse = await fetch(`/api/conversations/errors?conversationId=${params.id}`);
+      const errorsResponse = await fetch(`/api/conversations/errors?conversationId=${conversationId}`);
+      if (!errorsResponse.ok) {
+        throw new Error(`HTTP error! status: ${errorsResponse.status}`);
+      }
       const errorsData = await errorsResponse.json();
 
       if (!errorsData.success) {
-        throw new Error(errorsData.message);
+        throw new Error(errorsData.message || 'Failed to load errors');
       }
 
       setErrors(errorsData.errors);
+      setSuccess('Dati caricati con successo');
     } catch (err) {
       setError(err.message);
       console.error('Errore nel caricamento dei dettagli:', err);
@@ -58,8 +71,10 @@ const errorsResponse = await fetch(`/api/conversations/errors?conversationId=${p
   };
 
   useEffect(() => {
-    loadConversationDetails();
-  }, [params.id]);
+    if (conversationId) {
+      loadConversationDetails();
+    }
+  }, [conversationId]);
 
   // Filtra i messaggi per ruolo
   const filteredMessages = messages.filter(message => 
@@ -84,7 +99,7 @@ const errorsResponse = await fetch(`/api/conversations/errors?conversationId=${p
                 <span>Torna alla lista</span>
               </Link>
               <h1 className="text-3xl font-bold mt-2">
-                Conversazione #{params.id}
+                Conversazione #{conversationId}
               </h1>
             </div>
             <button

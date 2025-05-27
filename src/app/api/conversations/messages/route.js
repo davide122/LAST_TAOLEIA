@@ -70,24 +70,13 @@ export async function GET(request) {
       }, { status: 400 });
     }
 
-    // Costruisci la query base
-    let query = sql`
+    // Prima verifichiamo che la query base funzioni
+    const messages = await sql`
       SELECT * FROM conversation_messages
       WHERE conversation_id = ${conversationId}
-    `;
-
-    // Aggiungi il filtro per ruolo se specificato
-    if (role) {
-      query = sql`${query} AND role = ${role}`;
-    }
-
-    // Aggiungi ORDER BY, LIMIT e OFFSET
-    query = sql`${query}
       ORDER BY timestamp DESC
       LIMIT ${limit} OFFSET ${offset}
     `;
-
-    const messages = await query;
 
     return NextResponse.json({
       success: true,
