@@ -49,21 +49,67 @@ export async function POST(req) {
         body: JSON.stringify({ 
           messages: [{ 
             role: 'user', 
-            content: `[SYSTEM INSTRUCTIONS]
-You are Taoleia, a helpful assistant for Taormina tourism. You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. You have access to a database of activities and can provide detailed information about them. When users ask about specific activities, use the open_activity_card function to retrieve information. Always be friendly, professional, and helpful.
-
-[USER MESSAGE]
-${message}`
+            content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. Here is my message:\n\n${message}` 
           }] 
         })
       });
       if (!initRes.ok) throw new Error(await initRes.text());
       tid = (await initRes.json()).id;
     } else {
-      // Thread esistente, aggiungi solo il messaggio dell'utente
-      const msgRes = await fetch(
-        `https://api.openai.com/v1/threads/${tid}/messages`,
-        {
+      // Verifica che il thread esista ancora
+      try {
+        const threadCheck = await fetch(
+          `https://api.openai.com/v1/threads/${tid}`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'OpenAI-Beta':   'assistants=v2'
+            }
+          }
+        );
+        
+        if (!threadCheck.ok) {
+          // Se il thread non esiste più, creane uno nuovo
+          const initRes = await fetch('https://api.openai.com/v1/threads', {
+            method: 'POST',
+            headers: {
+              'Content-Type':  'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+              'OpenAI-Beta':   'assistants=v2'
+            },
+            body: JSON.stringify({ 
+              messages: [{ 
+                role: 'user', 
+                content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. Here is my message:\n\n${message}` 
+              }] 
+            })
+          });
+          if (!initRes.ok) throw new Error(await initRes.text());
+          tid = (await initRes.json()).id;
+        } else {
+          // Thread esistente, aggiungi il messaggio
+          const msgRes = await fetch(
+            `https://api.openai.com/v1/threads/${tid}/messages`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type':  'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'OpenAI-Beta':   'assistants=v2'
+              },
+              body: JSON.stringify({ 
+                role: 'user', 
+                content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. Here is my message:\n\n${message}` 
+              })
+            }
+          );
+          if (!msgRes.ok) throw new Error(await msgRes.text());
+        }
+      } catch (error) {
+        console.error('Errore nella verifica del thread:', error);
+        // In caso di errore, crea un nuovo thread
+        const initRes = await fetch('https://api.openai.com/v1/threads', {
           method: 'POST',
           headers: {
             'Content-Type':  'application/json',
@@ -71,12 +117,15 @@ ${message}`
             'OpenAI-Beta':   'assistants=v2'
           },
           body: JSON.stringify({ 
-            role: 'user', 
-            content: message 
+            messages: [{ 
+              role: 'user', 
+              content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. Here is my message:\n\n${message}` 
+            }] 
           })
-        }
-      );
-      if (!msgRes.ok) throw new Error(await msgRes.text());
+        });
+        if (!initRes.ok) throw new Error(await initRes.text());
+        tid = (await initRes.json()).id;
+      }
     }
 
     // === 2) avvia run in streaming ===
@@ -167,12 +216,6 @@ ${message}`
                    
                   const result = await res.json();
 
-                  // Assicuriamoci che il risultato sia sempre un oggetto valido
-                  const toolOutput = {
-                    tool_call_id: call.id,
-                    output: JSON.stringify(result || { error: 'No results found' })
-                  };
-
                   // invia output a OpenAI
                   await fetch(
                     `https://api.openai.com/v1/threads/${tid}/runs/${event.id}/submit_tool_outputs`,
@@ -184,7 +227,10 @@ ${message}`
                         'OpenAI-Beta':   'assistants=v2'
                       },
                       body: JSON.stringify({
-                        tool_outputs: [toolOutput]
+                        tool_outputs: [{
+                          tool_call_id: call.id,
+                          output:       JSON.stringify(result)
+                        }]
                       })
                     }
                   );

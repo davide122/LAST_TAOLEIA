@@ -18,6 +18,7 @@ import ChatMessages from './components/ChatMessages';
 import ChatInput from './components/ChatInput';
 import LanguageSelector from './components/languageselector.jsx';
 import { useConversationLogger } from '../hooks/useConversationLogger';
+import { useAudioManager } from './hooks/useAudioManager';
 
 export default function TaoleiaChat() {
   // --- STATE & REF ---
@@ -28,7 +29,6 @@ export default function TaoleiaChat() {
   const [threadId, setThreadId]     = useState(null);
   const [currentLanguage, setCurrentLanguage] = useState('it');
   const [mapKey, setMapKey] = useState(0);
-  const [categories, setCategories] = useState([]);
 
   const [isListeningChat, setIsListeningChat] = useState(false);
   const chatRecRef = useRef(null);
@@ -57,6 +57,8 @@ export default function TaoleiaChat() {
     logMessage, 
     logError 
   } = useConversationLogger();
+
+  const { playAudio, isPlaying } = useAudioManager();
 
   // --- EFFECT: Inizia una nuova conversazione quando viene creato un nuovo thread ---
   useEffect(() => {
@@ -104,6 +106,9 @@ export default function TaoleiaChat() {
           // Utilizziamo il messaggio di benvenuto tradotto nella lingua selezionata
           const welcomeMessage = welcomeMessages[storedLanguage] || welcomeMessages.it;
           
+          // Aggiungi il messaggio di benvenuto all'UI come messaggio utente
+          setMessages(m => [...m, { role: 'user', content: welcomeMessage }]);
+          
           // Log del messaggio dell'utente
           if (conversationId) {
             await logMessage('user', welcomeMessage, {
@@ -148,23 +153,7 @@ export default function TaoleiaChat() {
               try { obj = JSON.parse(data); }
               catch { continue; }
               if (obj.type === 'tool_call_result') {
-                // Gestione degli errori nelle function calls
-                if (obj.data && obj.data.error) {
-                  // Se c'è un errore nella function call, aggiungiamo un messaggio di errore
-                  setMessages(m => [...m, { 
-                    role: 'assistant', 
-                    content: `Mi dispiace, non sono riuscito a recuperare le informazioni richieste. ${obj.data.error}`
-                  }]);
-                } else if (obj.data && (!obj.data.name || !obj.data.description)) {
-                  // Se i dati sono incompleti o vuoti
-                  setMessages(m => [...m, { 
-                    role: 'assistant', 
-                    content: 'Mi dispiace, non sono riuscito a trovare informazioni dettagliate su questa attività.'
-                  }]);
-                } else {
-                  // Se tutto va bene, mostriamo la scheda dell'attività
-                  setMessages(m => [...m, { role: 'tool', data: obj.data }]);
-                }
+                setMessages(m => [...m, { role:'tool', data:obj.data }]);
                 continue;
               }
               if (obj.object==='thread.message.delta' && obj.delta?.content) {
@@ -471,101 +460,7 @@ export default function TaoleiaChat() {
     }
   };
 
-  // Funzione per gestire l'audio della chat
-  const handleChatAudio = async (text) => {
-    if (!text.trim()) return;
-    
-    try {
-      // Ferma e pulisce l'audio corrente se presente
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
-        if (audioRef.current.src) {
-          URL.revokeObjectURL(audioRef.current.src);
-        }
-        audioRef.current = null;
-        setIsAudioPlaying(false);
-      }
-
-      // Crea un nuovo elemento audio
-      const audio = new Audio();
-      audioRef.current = audio;
-
-      // Fetch dell'audio
-      const res = await fetch('/api/elevenlabs-tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      });
-
-      if (!res.ok) {
-        throw new Error(`TTS fallito con stato ${res.status}`);
-      }
-
-      // Imposta la sorgente audio
-      const blob = await res.blob();
-      const audioUrl = URL.createObjectURL(blob);
-      audio.src = audioUrl;
-
-      // Gestisci gli eventi di riproduzione
-      audio.addEventListener('play', () => {
-        setIsAudioPlaying(true);
-      });
-
-      audio.addEventListener('pause', () => {
-        setIsAudioPlaying(false);
-      });
-
-      audio.addEventListener('ended', () => {
-        setIsAudioPlaying(false);
-        if (audioRef.current) {
-          audioRef.current.src = '';
-          URL.revokeObjectURL(audioUrl);
-          audioRef.current = null;
-        }
-      });
-
-      audio.addEventListener('error', (e) => {
-        console.error('Errore durante la riproduzione audio:', e);
-        setIsAudioPlaying(false);
-        if (audioRef.current) {
-          audioRef.current.src = '';
-          URL.revokeObjectURL(audioUrl);
-          audioRef.current = null;
-        }
-      });
-
-      // Avvia la riproduzione
-      await audio.play();
-
-    } catch (err) {
-      console.error('Errore durante la riproduzione TTS:', err);
-      setIsAudioPlaying(false);
-      if (audioRef.current) {
-        audioRef.current.src = '';
-        URL.revokeObjectURL(audioRef.current.src);
-        audioRef.current = null;
-      }
-    }
-  };
-
-  // --- EFFECT: Inizializza le categorie ---
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await fetch('/api/get-categories');
-        if (!res.ok) throw new Error('Failed to fetch categories');
-        const data = await res.json();
-        setCategories(data.categories || []);
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  // Modifica la funzione sendMessage per utilizzare handleChatAudio
+  // Modifica la funzione sendMessage per utilizzare il nuovo sistema audio
   const sendMessage = async (text = input) => {
     if (!text.trim()) return;
     
@@ -575,7 +470,7 @@ export default function TaoleiaChat() {
     try {
       // Aggiungi il messaggio dell'utente
       setMessages(prev => [...prev, { role: 'user', content: text }]);
-      
+    
       // Log del messaggio dell'utente
       if (conversationId) {
         await logMessage('user', text, {
@@ -584,24 +479,13 @@ export default function TaoleiaChat() {
         });
       }
 
-      // Prepara il contesto per l'assistente usando le categorie già caricate
-      const context = {
-        language: currentLanguage,
-        categories: categories,
-        instructions: `You are a helpful assistant for Taormina tourism. Please respond in the same language as the user's message (${currentLanguage}). If the user asks about specific categories or activities, use the provided categories list to give relevant information.`
-      };
-
       const response = await fetch('/api/taoleia-agent-stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-selected-language': currentLanguage
         },
-        body: JSON.stringify({ 
-          message: text, 
-          threadId,
-          context 
-        })
+        body: JSON.stringify({ message: text, threadId })
       });
 
       if (!response.ok) throw new Error('Network response was not ok');
@@ -628,37 +512,7 @@ export default function TaoleiaChat() {
           try { obj = JSON.parse(data); }
           catch { continue; }
           if (obj.type === 'tool_call_result') {
-            // Gestione degli errori nelle function calls
-            if (obj.data && obj.data.error) {
-              // Se c'è un errore nella function call, aggiungiamo un messaggio di errore
-              const errorMessage = `Mi dispiace, non sono riuscito a recuperare le informazioni richieste. ${obj.data.error}`;
-              setMessages(m => {
-                const newMessages = [...m];
-                // Rimuovi il messaggio dell'assistente vuoto
-                newMessages.pop();
-                // Aggiungi il messaggio di errore
-                newMessages.push({ role: 'assistant', content: errorMessage });
-                return newMessages;
-              });
-              // Aggiorna anche il testo completo per l'audio
-              full = errorMessage;
-            } else if (obj.data && (!obj.data.name || !obj.data.description)) {
-              // Se i dati sono incompleti o vuoti
-              const errorMessage = 'Mi dispiace, non sono riuscito a trovare informazioni dettagliate su questa attività.';
-              setMessages(m => {
-                const newMessages = [...m];
-                // Rimuovi il messaggio dell'assistente vuoto
-                newMessages.pop();
-                // Aggiungi il messaggio di errore
-                newMessages.push({ role: 'assistant', content: errorMessage });
-                return newMessages;
-              });
-              // Aggiorna anche il testo completo per l'audio
-              full = errorMessage;
-            } else {
-              // Se tutto va bene, mostriamo la scheda dell'attività
-              setMessages(m => [...m, { role: 'tool', data: obj.data }]);
-            }
+            setMessages(m => [...m, { role: 'tool', data: obj.data }]);
             continue;
           }
           if (obj.object === 'thread.message.delta' && obj.delta?.content) {
@@ -694,8 +548,8 @@ export default function TaoleiaChat() {
         });
       }
 
-      // Riproduci l'audio della risposta usando handleChatAudio
-      await handleChatAudio(full);
+      // Riproduci l'audio della risposta usando il nuovo sistema
+      await playAudio(full);
 
     } catch (error) {
       console.error('Error:', error);
@@ -809,7 +663,7 @@ export default function TaoleiaChat() {
       )}
 
       {/* Bottom nav arrotondata */}
-      {/* <nav className="nav-bar">
+      <nav className="nav-bar">
         
         <button 
           onClick={() => setActiveTab('location')} 
@@ -828,7 +682,7 @@ export default function TaoleiaChat() {
             className={`nav-icon ${activeTab === 'chat' ? 'text-[#E3742E]' : 'text-[#F5EFE0]'}`}
           />
         </button>
-      </nav> */}
+      </nav>
     </div>
   </div>
 );
