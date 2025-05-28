@@ -576,7 +576,7 @@ export default function TaoleiaChat() {
     }}
   >
     <>
-    <NewsletterForm></NewsletterForm>
+    {/* <NewsletterForm></NewsletterForm> */}
     </>
     <img src="/sfondo.png" className='absolute sfocas'></img>
 
