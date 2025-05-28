@@ -141,22 +141,50 @@ export async function POST(req) {
         body: JSON.stringify({
           assistant_id: assistant,
           stream:       true,
-          tools: [{
-            type: 'function',
-            function: {
-              name:        'open_activity_card',
-              description: "Cerca un'attività per nome e restituisce i dettagli",
-              parameters: {
-                type: 'object',
-                properties: {
-                  query: { type: 'string', description: "Termine di ricerca" },
-                  lang: { type: 'string', description: "Lingua per le traduzioni (it, en, fr, es, de)" }
-                },
-                required: ['query'],
-                additionalProperties: false
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name:        'open_activity_card',
+                description: "Cerca un'attività per nome e restituisce i dettagli",
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    query: { type: 'string', description: "Termine di ricerca" },
+                    lang: { type: 'string', description: "Lingua per le traduzioni (it, en, fr, es, de)" }
+                  },
+                  required: ['query'],
+                  additionalProperties: false
+                }
+              }
+            },
+            {
+              type: 'function',
+              function: {
+                name: 'open_menu',
+                description: 'Apri menu categoria e consigli',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    category: {
+                      type: 'string',
+                      description: 'Nome della categoria da aprire nel menu'
+                    },
+                    recommendations: {
+                      type: 'array',
+                      description: 'Lista di raccomandazioni da mostrare',
+                      items: {
+                        type: 'string',
+                        description: 'Raccomandazione specifica'
+                      }
+                    }
+                  },
+                  required: ['category', 'recommendations'],
+                  additionalProperties: false
+                }
               }
             }
-          }]
+          ]
         })
       }
     );
@@ -237,7 +265,48 @@ export async function POST(req) {
 
                   // inoltra subito al client
                   controller.enqueue(encoder.encode(
-                    `data: ${JSON.stringify({ type: 'tool_call_result', data: result })}\n\n`
+                    `data: ${JSON.stringify({ type: 'tool_call_result', data: result })}
+
+`
+                  ));
+                }
+                else if (call.function.name === 'open_menu') {
+                  const args = JSON.parse(call.function.arguments);
+                  const res = await fetch(`${baseUrl}/api/open-menu`, {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ 
+                      category: args.category,
+                      recommendations: args.recommendations
+                    })
+                  });
+                   
+                  const result = await res.json();
+
+                  // invia output a OpenAI
+                  await fetch(
+                    `https://api.openai.com/v1/threads/${tid}/runs/${event.id}/submit_tool_outputs`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type':  'application/json',
+                        'Authorization': `Bearer ${apiKey}`,
+                        'OpenAI-Beta':   'assistants=v2'
+                      },
+                      body: JSON.stringify({
+                        tool_outputs: [{
+                          tool_call_id: call.id,
+                          output:       JSON.stringify(result)
+                        }]
+                      })
+                    }
+                  );
+
+                  // inoltra subito al client
+                  controller.enqueue(encoder.encode(
+                    `data: ${JSON.stringify({ type: 'tool_call_result', data: result })}
+
+`
                   ));
                 }
               }

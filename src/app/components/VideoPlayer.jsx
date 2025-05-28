@@ -179,7 +179,7 @@ export default function VideoPlayer({
   return (
     <div className="relative w-full h-full">
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 ">
           <p className="text-white">{error}</p>
         </div>
       )}
@@ -192,6 +192,7 @@ export default function VideoPlayer({
         muted
         loop={isLooping}
         preload="auto"
+       
       />
     </div>
   );

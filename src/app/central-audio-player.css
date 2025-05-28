@@ -1,0 +1,119 @@
+/* Stili per il player audio centralizzato */
+.central-audio-player {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  backdrop-filter: blur(5px);
+  padding: 10px;
+  border-radius: 0 0 1rem 1rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: opacity 0.3s ease;
+}
+
+.audio-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+
+.audio-control-button {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.audio-control-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.audio-control-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.audio-control-button.play-pause {
+  background-color: rgba(255, 255, 255, 0.2);
+  width: 48px;
+  height: 48px;
+  font-size: 1.5rem;
+}
+
+.audio-control-button.play-pause:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.audio-progress-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.audio-progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.audio-progress {
+  height: 100%;
+  background-color: #0066ff;
+  border-radius: 3px;
+  transition: width 0.1s linear;
+}
+
+.audio-time {
+  display: flex;
+  justify-content: space-between;
+  color: white;
+  font-size: 0.75rem;
+  padding: 0 2px;
+}
+
+/* Stile per quando non c'è audio in riproduzione */
+.central-audio-player.inactive {
+  opacity: 0.7;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .central-audio-player {
+    padding: 8px;
+  }
+  
+  .audio-controls {
+    gap: 12px;
+  }
+  
+  .audio-control-button {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+  
+  .audio-control-button.play-pause {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+}

@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import ActivityCard from './ActivityCard';
+import MenuCard from './MenuCard';
 import ClickableCategory from './ClickableCategory';
 import LoadingDots from './LoadingDots';
 
@@ -20,6 +21,14 @@ export default function ChatMessages({
   // Determina se mostrare i pallini di caricamento
   const showLoadingDots = loading && messages.length > 0 && messages[messages.length - 1].role !== 'assistant';
 
+  // Funzione per renderizzare il contenuto del tool in base al tipo
+  const renderToolContent = (data) => {
+    if (data.type === 'menu') {
+      return <MenuCard {...data} />;
+    }
+    return <ActivityCard {...data} />;
+  };
+
   return (
     <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3">
       {messages.map((m, i) => (
@@ -28,7 +37,7 @@ export default function ChatMessages({
           className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
         >
           {m.role === 'tool' ? (
-            <ActivityCard {...m.data} />
+            renderToolContent(m.data)
           ) : (
             <div className={
               m.role === 'user'
@@ -54,4 +63,4 @@ export default function ChatMessages({
       <div ref={endRef} />
     </div>
   );
-} 
+}

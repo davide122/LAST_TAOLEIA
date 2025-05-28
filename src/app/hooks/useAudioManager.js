@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 export function useAudioManager() {
   const [isPlaying, setIsPlaying] = useState(false);
   const currentAudioRef = useRef(null);
+  const audioElementRef = useRef(null);
 
   const stopCurrentAudio = () => {
     if (currentAudioRef.current) {
@@ -26,6 +27,7 @@ export function useAudioManager() {
       // Crea un nuovo elemento audio
       const audio = new Audio();
       currentAudioRef.current = audio;
+      audioElementRef.current = audio;
 
       // Fetch dell'audio
       const res = await fetch('/api/elevenlabs-tts', {
@@ -65,10 +67,24 @@ export function useAudioManager() {
       stopCurrentAudio();
     }
   };
+  
+  const togglePlayPause = () => {
+    if (!currentAudioRef.current) return;
+    
+    if (isPlaying) {
+      currentAudioRef.current.pause();
+    } else {
+      currentAudioRef.current.play().catch(err => {
+        console.error('Errore nella riproduzione:', err);
+      });
+    }
+  };
 
   return {
     playAudio,
     stopCurrentAudio,
-    isPlaying
+    togglePlayPause,
+    isPlaying,
+    audioElementRef
   };
-} 
+}

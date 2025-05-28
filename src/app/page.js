@@ -11,6 +11,7 @@ import { speechLanguages } from './config/languages';
 import { welcomeMessages } from './config/welcomeMessages';
 import '../chat.css';
 import './taoleia-style.css';
+import './central-audio-player.css';
 import MapView from './components/MapView';
 import NewsletterForm from './components/newsletter/NewsletterForm';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
@@ -19,6 +20,7 @@ import ChatInput from './components/ChatInput';
 import LanguageSelector from './components/languageselector.jsx';
 import { useConversationLogger } from '../hooks/useConversationLogger';
 import { useAudioManager } from './hooks/useAudioManager';
+import CentralAudioPlayer from './components/CentralAudioPlayer';
 
 export default function TaoleiaChat() {
   // --- STATE & REF ---
@@ -58,7 +60,7 @@ export default function TaoleiaChat() {
     logError 
   } = useConversationLogger();
 
-  const { playAudio, isPlaying } = useAudioManager();
+  const { playAudio, isPlaying, togglePlayPause, audioElementRef: audioManagerRef } = useAudioManager();
 
   // --- EFFECT: Inizia una nuova conversazione quando viene creato un nuovo thread ---
   useEffect(() => {
@@ -584,8 +586,15 @@ export default function TaoleiaChat() {
     <div className="absolute top-0 left-0 w-full h-[30vh] z-50 overflow-hidden rounded-3xl p-3">
       <VideoPlayer
         videoUrl="/parla.mp4"
-        isPlaying={isAudioPlaying}
+        isPlaying={isPlaying}
         className="object-cover w-full h-full"
+      />
+      
+      {/* Player audio centralizzato */}
+      <CentralAudioPlayer 
+        audioRef={audioManagerRef}
+        isPlaying={isPlaying}
+        onPlayPause={togglePlayPause}
       />
     </div>
     
@@ -663,7 +672,7 @@ export default function TaoleiaChat() {
       )}
 
       {/* Bottom nav arrotondata */}
-      <nav className="nav-bar">
+      {/* <nav className="nav-bar">
         
         <button 
           onClick={() => setActiveTab('location')} 
@@ -682,7 +691,7 @@ export default function TaoleiaChat() {
             className={`nav-icon ${activeTab === 'chat' ? 'text-[#E3742E]' : 'text-[#F5EFE0]'}`}
           />
         </button>
-      </nav>
+      </nav> */}
     </div>
   </div>
 );
