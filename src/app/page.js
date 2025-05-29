@@ -12,6 +12,7 @@ import { welcomeMessages } from './config/welcomeMessages';
 import '../chat.css';
 import './taoleia-style.css';
 import './central-audio-player.css';
+import './components/InstallPWA.css';
 import MapView from './components/MapView';
 import NewsletterForm from './components/newsletter/NewsletterForm';
 import { useAudioPlayer } from './hooks/useAudioPlayer';
@@ -23,6 +24,7 @@ import { useAudioManager } from './hooks/useAudioManager';
 import CentralAudioPlayer from './components/CentralAudioPlayer';
 import AccessibilityMenu from './components/AccessibilityMenu';
 import LoadingIndicator from './components/LoadingIndicator';
+import InstallPWA from './components/InstallPWA';
 import { useOfflineData } from '../hooks/useOfflineData';
 
 export default function TaoleiaChat() {
@@ -695,6 +697,9 @@ export default function TaoleiaChat() {
     {/* <NewsletterForm></NewsletterForm> */}
     </>
     <img src="/sfondo.png" className='absolute sfocas'></img>
+    
+    {/* Componente per l'installazione PWA */}
+    <InstallPWA />
 
     {/* Banner per la modalità offline */}
     {showOfflineBanner && (
