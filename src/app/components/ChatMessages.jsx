@@ -29,9 +29,12 @@ export default function ChatMessages({
     return <ActivityCard {...data} />;
   };
 
+  // Filtra i messaggi per nascondere il primo messaggio dell'utente (istruzioni)
+  const visibleMessages = messages.length > 0 ? messages.slice(1) : [];
+
   return (
     <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3" role="list" aria-live="polite">
-      {messages.map((m, i) => (
+      {visibleMessages.map((m, i) => (
         <div
           key={i}
           className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}

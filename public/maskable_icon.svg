@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle with safe zone -->
+  <circle cx="256" cy="256" r="256" fill="#0e3740"/>
+  
+  <!-- Inner content (centered in the safe zone) -->
+  <g transform="translate(128, 128) scale(0.5)">
+    <!-- Stylized T for Taoleia -->
+    <path d="M256 96C370.875 96 464 189.125 464 304C464 418.875 370.875 512 256 512C141.125 512 48 418.875 48 304C48 189.125 141.125 96 256 96Z" fill="#E3742E"/>
+    
+    <!-- Text element -->
+    <path d="M256 160C300.183 160 336 195.817 336 240V368C336 412.183 300.183 448 256 448C211.817 448 176 412.183 176 368V240C176 195.817 211.817 160 256 160Z" fill="#F5EFE0"/>
+    
+    <path d="M176 208H336" stroke="#0e3740" stroke-width="32" stroke-linecap="round"/>
+    
+    <!-- Decorative elements -->
+    <circle cx="216" cy="272" r="16" fill="#0e3740"/>
+    <circle cx="296" cy="272" r="16" fill="#0e3740"/>
+    
+    <path d="M216 336C216 336 236 368 256 368C276 368 296 336 296 336" stroke="#0e3740" stroke-width="16" stroke-linecap="round"/>
+  </g>
+</svg>

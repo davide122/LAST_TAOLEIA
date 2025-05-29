@@ -1,0 +1,13 @@
+# Taoleia robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://taoleia.com/sitemap.xml
+
+# Disallow API endpoints
+Disallow: /api/
+
+# Allow all bots to all files
+User-agent: *
+Disallow:

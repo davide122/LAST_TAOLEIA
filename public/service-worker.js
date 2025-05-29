@@ -1,5 +1,8 @@
 // Nome della cache
-const CACHE_NAME = 'taoleia-cache-v1';
+const CACHE_NAME = 'taoleia-cache-v2';
+const STATIC_CACHE = 'taoleia-static-v2';
+const DYNAMIC_CACHE = 'taoleia-dynamic-v2';
+const OFFLINE_URL = '/offline.html';
 
 // Risorse da mettere in cache durante l'installazione
 const STATIC_RESOURCES = [
@@ -14,34 +17,78 @@ const STATIC_RESOURCES = [
   '/favicon-32x32.png',
   '/parla.mp4',
   '/sd.mp4',
-  '/sfondo.png'
+  '/sfondo.png',
+  '/site.webmanifest',
+  '/robots.txt',
+  '/css/main.css',
+  '/js/main.js'
+];
+
+// Risorse che vogliamo precaricare ma che non sono critiche
+const PRECACHE_RESOURCES = [
+  '/images/icons/icon-72x72.png',
+  '/images/icons/icon-96x96.png',
+  '/images/icons/icon-128x128.png',
+  '/images/icons/icon-144x144.png',
+  '/images/icons/icon-152x152.png',
+  '/images/icons/icon-192x192.png',
+  '/images/icons/icon-384x384.png',
+  '/images/icons/icon-512x512.png'
 ];
 
 // Installazione del Service Worker
 self.addEventListener('install', (event) => {
+  console.log('[Service Worker] Installazione');
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Cache aperta');
-        return cache.addAll(STATIC_RESOURCES);
-      })
-      .then(() => self.skipWaiting())
+    Promise.all([
+      caches.open(STATIC_CACHE)
+        .then((cache) => {
+          console.log('[Service Worker] Precaricamento risorse statiche');
+          return cache.addAll(STATIC_RESOURCES);
+        }),
+      caches.open(DYNAMIC_CACHE)
+        .then((cache) => {
+          console.log('[Service Worker] Precaricamento risorse dinamiche');
+          // Precarica alcune risorse ma non bloccare l'installazione se falliscono
+          PRECACHE_RESOURCES.forEach(url => {
+            fetch(url).then(response => {
+              if (response.ok) {
+                cache.put(url, response);
+              }
+            }).catch(() => {
+              console.log('[Service Worker] Impossibile precaricare:', url);
+            });
+          });
+          return Promise.resolve();
+        })
+    ])
+    .then(() => {
+      console.log('[Service Worker] Installazione completata');
+      return self.skipWaiting();
+    })
   );
 });
 
 // Attivazione del Service Worker
 self.addEventListener('activate', (event) => {
+  console.log('[Service Worker] Attivazione');
+  const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, CACHE_NAME];
+  
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Eliminazione cache vecchia:', cacheName);
+          if (!currentCaches.includes(cacheName)) {
+            console.log('[Service Worker] Eliminazione cache vecchia:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
-    }).then(() => self.clients.claim())
+    })
+    .then(() => {
+      console.log('[Service Worker] Attivazione completata');
+      return self.clients.claim();
+    })
   );
 });
 
@@ -52,42 +99,83 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Strategia per le richieste di navigazione (HTML)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          console.log('[Service Worker] Fallback alla pagina offline per navigazione');
+          return caches.match(OFFLINE_URL);
+        })
+    );
+    return;
+  }
+
+  // Strategia Cache First per risorse statiche
+  if (isStaticAsset(event.request.url)) {
+    event.respondWith(
+      caches.match(event.request)
+        .then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+
+          return fetch(event.request)
+            .then((response) => {
+              if (!response || response.status !== 200) {
+                return response;
+              }
+
+              const responseToCache = response.clone();
+              caches.open(STATIC_CACHE)
+                .then((cache) => {
+                  cache.put(event.request, responseToCache);
+                });
+
+              return response;
+            })
+            .catch(() => {
+              console.log('[Service Worker] Risorsa statica non disponibile offline');
+              // Potremmo restituire un placeholder o un'immagine di fallback
+            });
+        })
+    );
+    return;
+  }
+
+  // Strategia Network First con fallback alla cache per altre risorse
   event.respondWith(
-    caches.match(event.request)
+    fetch(event.request)
       .then((response) => {
-        // Restituisci la risorsa dalla cache se disponibile
-        if (response) {
+        if (!response || response.status !== 200) {
           return response;
         }
 
-        // Altrimenti, fai la richiesta alla rete
-        return fetch(event.request)
-          .then((response) => {
-            // Controlla se la risposta è valida
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clona la risposta perché il body può essere consumato solo una volta
-            const responseToCache = response.clone();
-
-            // Aggiungi la risposta alla cache
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          })
-          .catch(() => {
-            // Se la richiesta fallisce (offline), mostra la pagina offline
-            if (event.request.mode === 'navigate') {
-              return caches.match('/offline.html');
-            }
+        const responseToCache = response.clone();
+        caches.open(DYNAMIC_CACHE)
+          .then((cache) => {
+            cache.put(event.request, responseToCache);
           });
+
+        return response;
+      })
+      .catch(() => {
+        console.log('[Service Worker] Fallback alla cache per:', event.request.url);
+        return caches.match(event.request);
       })
   );
 });
+
+// Funzione per verificare se una risorsa è statica
+function isStaticAsset(url) {
+  const staticExtensions = [
+    '.css', '.js', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp',
+    '.woff', '.woff2', '.ttf', '.eot', '.ico', '.mp4', '.webm'
+  ];
+  
+  return staticExtensions.some(ext => url.endsWith(ext)) || 
+         STATIC_RESOURCES.some(resource => url.endsWith(resource));
+}
 
 // Sincronizzazione in background quando la connessione viene ripristinata
 self.addEventListener('sync', (event) => {

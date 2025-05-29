@@ -2,10 +2,17 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
   <title>Taoleia - Offline</title>
+  <meta name="description" content="Sei offline. Taoleia è temporaneamente non disponibile senza connessione internet.">
+  <meta name="theme-color" content="#E3742E">
   <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="/site.webmanifest">
   <link rel="icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Taoleia">
   <style>
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -65,11 +72,64 @@
       text-decoration: none;
       display: inline-block;
       margin-top: 1rem;
+      margin-right: 0.5rem;
     }
     
     .button:hover {
       background-color: #c45e1f;
       transform: translateY(-2px);
+    }
+    
+    .reconnect {
+      background-color: #4CAF50;
+    }
+    
+    .reconnect:hover {
+      background-color: #3e8e41;
+    }
+    
+    .button-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 1.5rem;
+    }
+    
+    .status-container {
+      margin-top: 2rem;
+      text-align: center;
+    }
+    
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.9rem;
+      color: #888;
+    }
+    
+    .dot {
+      width: 10px;
+      height: 10px;
+      background-color: #E3742E;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 1.5s infinite;
+    }
+    
+    .checking {
+      font-style: italic;
+    }
+    
+    @keyframes pulse {
+      0% {
+        opacity: 0.3;
+      }
+      50% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0.3;
+      }
     }
     
     @media (max-width: 600px) {
@@ -91,25 +151,53 @@
 <body>
   <div class="container">
     <img src="/android-chrome-192x192.png" alt="Taoleia Logo" class="logo">
-    <h1>Sei offline</h1>
+    <h1 id="connection-status">Sei offline</h1>
     <p>Sembra che tu sia offline al momento. Alcune funzionalità di Taoleia potrebbero non essere disponibili fino a quando non ti riconnetti a Internet.</p>
     <p>Puoi comunque accedere ai contenuti che hai già visitato in precedenza.</p>
-    <a href="/" class="button">Torna alla home</a>
+    <p>Non appena la connessione sarà ripristinata, potrai tornare a utilizzare tutte le funzionalità di Taoleia.</p>
+    <div class="button-container">
+      <a href="/" class="button">Torna alla home</a>
+      <button id="reconnect-button" class="button reconnect" style="display: none;">Riconnetti ora</button>
+    </div>
+    <div class="status-container">
+      <div class="status-indicator">
+        <span class="dot"></span>
+        <span class="checking">Controllo connessione...</span>
+      </div>
+    </div>
   </div>
   
   <script>
-    // Controlla periodicamente se la connessione è stata ripristinata
-    window.addEventListener('online', () => {
-      window.location.reload();
+    // Controlla lo stato della connessione e aggiorna l'interfaccia
+    function updateOnlineStatus() {
+      const statusElement = document.getElementById('connection-status');
+      const reconnectButton = document.getElementById('reconnect-button');
+      
+      if (navigator.onLine) {
+        statusElement.textContent = 'Connessione ripristinata!';
+        statusElement.style.color = '#4CAF50';
+        reconnectButton.style.display = 'inline-block';
+      } else {
+        statusElement.textContent = 'Sei offline';
+        statusElement.style.color = '#E3742E';
+        reconnectButton.style.display = 'none';
+      }
+    }
+    
+    // Aggiungi listener per gli eventi online e offline
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    
+    // Controlla lo stato iniziale
+    updateOnlineStatus();
+    
+    // Funzione per ricaricare la pagina quando la connessione è ripristinata
+    document.getElementById('reconnect-button').addEventListener('click', function() {
+      window.location.href = '/';
     });
     
-    // Aggiungi un listener per il pulsante "Torna alla home"
-    document.querySelector('.button').addEventListener('click', (e) => {
-      if (!navigator.onLine) {
-        e.preventDefault();
-        alert('Sei ancora offline. Riprova quando sarai connesso a Internet.');
-      }
-    });
+    // Controlla periodicamente lo stato della connessione
+    setInterval(updateOnlineStatus, 5000);
   </script>
 </body>
 </html>

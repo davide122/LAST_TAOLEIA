@@ -2,12 +2,46 @@
   "name": "Taoleia - La tua guida turistica AI",
   "short_name": "Taoleia",
   "description": "Scopri luoghi, attività e cultura con la tua guida turistica AI personale",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
+  "id": "/",
   "display": "standalone",
-  "background_color": "#F5EFE0",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "background_color": "#0e3740",
   "theme_color": "#E3742E",
   "orientation": "portrait",
+  "scope": "/",
+  "lang": "it-IT",
+  "dir": "ltr",
+  "categories": ["travel", "navigation", "lifestyle", "productivity"],
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Schermata principale di Taoleia"
+    },
+    {
+      "src": "/screenshots/screenshot2.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Conversazione con Taoleia su mobile"
+    }
+  ],
   "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "/favicon-16x16.png",
       "sizes": "16x16",
@@ -24,29 +58,26 @@
       "type": "image/png"
     },
     {
-      "src": "/android-chrome-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/android-chrome-512x512.png",
+      "src": "/maskable_icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
     {
-      "name": "Chat",
-      "short_name": "Chat",
-      "description": "Parla con Taoleia",
-      "url": "/"
-    },
-    {
-      "name": "Mappa",
-      "short_name": "Mappa",
-      "description": "Esplora la mappa",
-      "url": "/?tab=location"
+      "name": "Home",
+      "short_name": "Home",
+      "description": "Vai alla pagina principale",
+      "url": "/",
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "iarc_rating_id": "",
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  }
 }
