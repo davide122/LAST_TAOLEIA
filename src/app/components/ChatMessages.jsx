@@ -2,7 +2,7 @@ import { useRef, useEffect } from 'react';
 import ActivityCard from './ActivityCard';
 import MenuCard from './MenuCard';
 import ClickableCategory from './ClickableCategory';
-import LoadingDots from './LoadingDots';
+import LoadingIndicator from './LoadingIndicator';
 
 export default function ChatMessages({ 
   messages, 
@@ -30,14 +30,19 @@ export default function ChatMessages({
   };
 
   return (
-    <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3">
+    <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3" role="list" aria-live="polite">
       {messages.map((m, i) => (
         <div
           key={i}
           className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          role="listitem"
         >
           {m.role === 'tool' ? (
             renderToolContent(m.data)
+          ) : m.role === 'offline' ? (
+            <div className="message-assistant offline-message break-words" aria-live="polite">
+              <span aria-label="Messaggio offline">{m.content}</span>
+            </div>
           ) : (
             <div className={
               m.role === 'user'
@@ -54,9 +59,9 @@ export default function ChatMessages({
         </div>
       ))}
       {showLoadingDots && (
-        <div className="flex justify-start">
+        <div className="flex justify-start" role="status" aria-live="polite">
           <div className="message-assistant break-words">
-            <LoadingDots />
+            <LoadingIndicator type="dots" size="medium" />
           </div>
         </div>
       )}

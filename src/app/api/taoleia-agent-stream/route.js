@@ -49,7 +49,7 @@ export async function POST(req) {
         body: JSON.stringify({ 
           messages: [{ 
             role: 'user', 
-            content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. Here is my message:\n\n${message}` 
+            content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. Here is my message:\n\n${message} max token 200, max world 200.` 
           }] 
         })
       });

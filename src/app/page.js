@@ -21,6 +21,9 @@ import LanguageSelector from './components/languageselector.jsx';
 import { useConversationLogger } from '../hooks/useConversationLogger';
 import { useAudioManager } from './hooks/useAudioManager';
 import CentralAudioPlayer from './components/CentralAudioPlayer';
+import AccessibilityMenu from './components/AccessibilityMenu';
+import LoadingIndicator from './components/LoadingIndicator';
+import { useOfflineData } from '../hooks/useOfflineData';
 
 export default function TaoleiaChat() {
   // --- STATE & REF ---
@@ -31,6 +34,9 @@ export default function TaoleiaChat() {
   const [threadId, setThreadId]     = useState(null);
   const [currentLanguage, setCurrentLanguage] = useState('it');
   const [mapKey, setMapKey] = useState(0);
+  const [isOffline, setIsOffline] = useState(false);
+  const [showOfflineBanner, setShowOfflineBanner] = useState(false);
+  const [serviceWorkerRegistered, setServiceWorkerRegistered] = useState(false);
 
   const [isListeningChat, setIsListeningChat] = useState(false);
   const chatRecRef = useRef(null);
@@ -61,6 +67,14 @@ export default function TaoleiaChat() {
   } = useConversationLogger();
 
   const { playAudio, isPlaying, togglePlayPause, audioElementRef: audioManagerRef } = useAudioManager();
+  
+  // Inizializza l'hook per i dati offline
+  const { 
+    saveMessageToQueue, 
+    getMessagesQueue, 
+    saveActivity, 
+    getActivity 
+  } = useOfflineData();
 
   // --- EFFECT: Inizia una nuova conversazione quando viene creato un nuovo thread ---
   useEffect(() => {
@@ -96,6 +110,57 @@ export default function TaoleiaChat() {
     }
   }, [activeTab]);
 
+  // --- EFFECT: Registrazione del service worker ---
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && !serviceWorkerRegistered) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then((registration) => {
+          console.log('Service Worker registrato con successo:', registration);
+          setServiceWorkerRegistered(true);
+        })
+        .catch((error) => {
+          console.error('Errore durante la registrazione del Service Worker:', error);
+        });
+    }
+  }, [serviceWorkerRegistered]);
+  
+  // --- EFFECT: Monitoraggio dello stato della connessione ---
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      setShowOfflineBanner(false);
+      
+      // Tenta di sincronizzare i messaggi in coda quando la connessione viene ripristinata
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.sync.register('sync-messages');
+        });
+      }
+    };
+    
+    const handleOffline = () => {
+      setIsOffline(true);
+      setShowOfflineBanner(true);
+      
+      // Nascondi il banner dopo 5 secondi
+      setTimeout(() => {
+        setShowOfflineBanner(false);
+      }, 5000);
+    };
+    
+    // Controlla lo stato iniziale della connessione
+    setIsOffline(!navigator.onLine);
+    
+    // Aggiungi i listener per gli eventi online e offline
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+  
   // --- EFFECT: Messaggio di benvenuto ---
   useEffect(() => {
     if (!welcomeMessageSentRef.current && !loading && messages.length === 0) {
@@ -481,6 +546,34 @@ export default function TaoleiaChat() {
         });
       }
 
+      // Se l'utente è offline, salva il messaggio nella coda e mostra un messaggio di avviso
+      if (isOffline) {
+        try {
+          // Salva il messaggio nella coda offline
+          await saveMessageToQueue({
+            message: text,
+            threadId: threadId,
+            language: currentLanguage,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Aggiungi un messaggio di avviso
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: 'Sei offline. Il tuo messaggio verrà inviato automaticamente quando tornerai online.',
+            type: 'offline',
+            timestamp: new Date().toISOString()
+          }]);
+          
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.error('Errore durante il salvataggio del messaggio offline:', error);
+          setLoading(false);
+          return;
+        }
+      }
+
       const response = await fetch('/api/taoleia-agent-stream', {
         method: 'POST',
         headers: {
@@ -557,6 +650,27 @@ export default function TaoleiaChat() {
       console.error('Error:', error);
       setMessages(prev => [...prev, { role: 'assistant', content: 'Mi dispiace, si è verificato un errore.' }]);
       
+      // Se l'errore è dovuto alla connessione, salva il messaggio nella coda offline
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+        setIsOffline(true);
+        setShowOfflineBanner(true);
+        
+        // Nascondi il banner dopo 5 secondi
+        setTimeout(() => {
+          setShowOfflineBanner(false);
+        }, 5000);
+        
+        // Salva il messaggio nella coda offline
+        saveMessageToQueue({
+          message: text,
+          threadId: threadId,
+          language: currentLanguage,
+          timestamp: new Date().toISOString()
+        }).catch(err => {
+          console.error('Errore durante il salvataggio del messaggio offline:', err);
+        });
+      }
+      
       // Log dell'errore
       if (conversationId) {
         await logError('Errore durante l\'invio del messaggio', {
@@ -581,6 +695,16 @@ export default function TaoleiaChat() {
     {/* <NewsletterForm></NewsletterForm> */}
     </>
     <img src="/sfondo.png" className='absolute sfocas'></img>
+
+    {/* Banner per la modalità offline */}
+    {showOfflineBanner && (
+      <div className="offline-banner" role="alert" aria-live="assertive">
+        <span>Sei offline. Alcune funzionalità potrebbero non essere disponibili.</span>
+      </div>
+    )}
+    
+    {/* Menu di accessibilità */}
+    <AccessibilityMenu />
 
     {/* Video con bordi arrotondati */}
     <div className="absolute top-0 left-0 w-full h-[30vh] z-50 overflow-hidden rounded-3xl p-3">
@@ -612,7 +736,7 @@ export default function TaoleiaChat() {
       <div className="relative flex-1">
         {/* CHAT */}
         {activeTab === 'chat' && (
-          <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3">
+          <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3" role="list" aria-live="polite">
             <ChatMessages
               messages={messages}
               onCategoryClick={(category) => sendMessage(`Parlami di ${category}`)}
@@ -653,17 +777,19 @@ export default function TaoleiaChat() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !loading && sendMessage()}
               placeholder="Scrivi un messaggio…"
-              disabled={loading}
+              disabled={loading || isOffline}
+              aria-label="Messaggio di testo"
             />
             <SpeechRecognition
               currentLanguage={currentLanguage}
               onTranscriptChange={setInput}
-              disabled={loading}
+              disabled={loading || isOffline}
             />
             <button
               onClick={() => sendMessage()}
-              disabled={loading || !input.trim()}
-              className={`send-button ${loading || !input.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={loading || !input.trim() || isOffline}
+              className={`send-button ${loading || !input.trim() || isOffline ? 'opacity-50 cursor-not-allowed' : ''}`}
+              aria-label="Invia messaggio"
             >
               ➤
             </button>

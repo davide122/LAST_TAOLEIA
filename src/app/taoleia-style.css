@@ -210,6 +210,27 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.8); opacity: 0.5; }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-10px); }
+}
+
+@keyframes progress {
+  0% { width: 0; }
+  100% { width: 100%; }
+}
+
 .fade-in {
   animation: fadeIn 0.3s ease forwards;
 }
@@ -245,4 +266,425 @@
 .activity-list {
   max-height: 300px;
   overflow-y: auto;
+}
+
+/* Stili per l'accessibilità */
+.accessibility-menu-container {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+}
+
+.accessibility-toggle-button {
+  background-color: rgba(10, 59, 59, 0.8);
+  color: #F5EFE0;
+  border: none;
+  border-radius: 50%;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+}
+
+.accessibility-toggle-button:hover {
+  background-color: rgba(10, 59, 59, 1);
+  transform: scale(1.05);
+}
+
+.accessibility-toggle-button:focus {
+  outline: 2px solid #E3742E;
+  outline-offset: 2px;
+}
+
+.accessibility-panel {
+  position: absolute;
+  top: 4rem;
+  right: 0;
+  background-color: #F5EFE0;
+  color: #333;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  width: 300px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  z-index: 1001;
+}
+
+.accessibility-panel h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #0e3740;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.accessibility-panel h4 {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  color: #0e3740;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.accessibility-section {
+  margin-bottom: 1.5rem;
+}
+
+.accessibility-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.accessibility-button {
+  background-color: rgba(10, 59, 59, 0.1);
+  border: 1px solid rgba(10, 59, 59, 0.3);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.accessibility-button:hover {
+  background-color: rgba(10, 59, 59, 0.2);
+}
+
+.accessibility-button.active {
+  background-color: rgba(227, 116, 46, 0.2);
+  border-color: #E3742E;
+  font-weight: 500;
+}
+
+.accessibility-button:focus {
+  outline: 2px solid #E3742E;
+  outline-offset: 2px;
+}
+
+.accessibility-close-button {
+  background-color: #E3742E;
+  color: #F5EFE0;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.accessibility-close-button:hover {
+  background-color: #c45e1f;
+}
+
+.accessibility-close-button:focus {
+  outline: 2px solid #0e3740;
+  outline-offset: 2px;
+}
+
+/* Stili per dimensioni del testo */
+.font-size-small {
+  --font-size-base: 0.9rem;
+  --font-size-lg: 1.1rem;
+  --font-size-xl: 1.3rem;
+}
+
+.font-size-medium {
+  --font-size-base: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+}
+
+.font-size-large {
+  --font-size-base: 1.1rem;
+  --font-size-lg: 1.4rem;
+  --font-size-xl: 1.7rem;
+}
+
+.font-size-xlarge {
+  --font-size-base: 1.2rem;
+  --font-size-lg: 1.6rem;
+  --font-size-xl: 2rem;
+}
+
+/* Stili per il contrasto */
+.contrast-high {
+  --color-bg: #000;
+  --color-text: #fff;
+  --color-primary: #ffcc00;
+  --color-secondary: #00ccff;
+  --color-border: #fff;
+  filter: contrast(1.4);
+}
+
+.contrast-high .app {
+  background-color: #000 !important;
+  color: #fff;
+}
+
+.contrast-high .message-user {
+  background-color: #333;
+  color: #fff;
+  border: 2px solid #fff;
+}
+
+.contrast-high .message-assistant {
+  background-color: #fff;
+  color: #000;
+  border: 2px solid #000;
+}
+
+.contrast-high .input-field {
+  background-color: #fff;
+  color: #000;
+  border: 2px solid #fff;
+}
+
+.contrast-high .send-button {
+  background-color: #ffcc00;
+  color: #000;
+  border: 2px solid #fff;
+}
+
+/* Stili per gli indicatori di caricamento */
+.loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.loading-small {
+  font-size: 0.8rem;
+}
+
+.loading-medium {
+  font-size: 1rem;
+}
+
+.loading-large {
+  font-size: 1.2rem;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.loading-dots .dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: #E3742E;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dots .dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-dots .dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.loading-spinner svg {
+  width: 2.5rem;
+  height: 2.5rem;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner circle {
+  stroke: #E3742E;
+  stroke-linecap: round;
+  animation: progress 1.5s ease-in-out infinite;
+}
+
+.loading-bar {
+  width: 100%;
+  height: 0.25rem;
+  background-color: rgba(227, 116, 46, 0.2);
+  border-radius: 0.125rem;
+  overflow: hidden;
+}
+
+.loading-bar .bar-progress {
+  height: 100%;
+  background-color: #E3742E;
+  border-radius: 0.125rem;
+  animation: progress 2s ease infinite;
+}
+
+.loading-pulse {
+  width: 2rem;
+  height: 2rem;
+  background-color: #E3742E;
+  border-radius: 50%;
+  animation: pulse 1.5s ease infinite;
+}
+
+.loading-message {
+  margin-top: 0.5rem;
+  color: #0e3740;
+  text-align: center;
+}
+
+/* Stili per il banner offline */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background-color: #E3742E;
+  color: #F5EFE0;
+  text-align: center;
+  padding: 0.5rem;
+  font-weight: 500;
+  z-index: 9999;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.offline-banner.visible {
+  transform: translateY(0);
+}
+
+.offline-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.offline-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+/* Classe per nascondere elementi visivamente ma mantenerli accessibili agli screen reader */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Media queries per il responsive design */
+@media (max-width: 768px) {
+  .video-container {
+    max-height: 30vh;
+  }
+  
+  .message-user,
+  .message-assistant {
+    max-width: 90%;
+  }
+  
+  .input-container {
+    padding: 0.8rem;
+  }
+  
+  .accessibility-panel {
+    width: 280px;
+  }
+  
+  .nav-bar {
+    margin: 0.3rem 0.5rem;
+    padding: 0.3rem;
+  }
+  
+  .nav-button {
+    padding: 0.6rem;
+  }
+  
+  .nav-icon {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .video-container {
+    max-height: 25vh;
+  }
+  
+  .message-user,
+  .message-assistant {
+    max-width: 95%;
+    padding: 0.6rem 1rem;
+  }
+  
+  .input-field {
+    padding: 0.6rem 1rem;
+  }
+  
+  .send-button {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .accessibility-menu-container {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+  
+  .accessibility-toggle-button {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  
+  .accessibility-panel {
+    width: 250px;
+    padding: 1rem;
+  }
+  
+  .nav-bar {
+    border-radius: 1.5rem;
+  }
+  
+  .nav-button {
+    padding: 0.5rem;
+  }
+  
+  .nav-icon {
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .video-container {
+    max-height: 40vh;
+  }
+  
+  .messages-container {
+    max-height: 40vh;
+  }
+}
+
+/* Stili per dispositivi con dark mode */
+@media (prefers-color-scheme: dark) {
+  .contrast-normal .app {
+    background-color: #0a2a30 !important;
+  }
+  
+  .contrast-normal .message-user {
+    background-color: rgba(5, 40, 40, 0.9);
+  }
+  
+  .contrast-normal .input-container {
+    background-color: rgba(5, 40, 40, 0.7);
+  }
 }
