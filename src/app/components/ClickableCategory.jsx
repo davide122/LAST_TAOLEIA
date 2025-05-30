@@ -157,6 +157,8 @@ export default function ClickableCategory({ children, onCategoryClick }) {
   const findTerms = text => {
     const matches = [];
     const lower = normalizeText(text);
+    // Teniamo traccia delle parti di testo già evidenziate per evitare sovrapposizioni
+    const markedRanges = [];
 
     sortedTerms.forEach(term => {
       const norm = normalizeText(term);
@@ -166,8 +168,18 @@ export default function ClickableCategory({ children, onCategoryClick }) {
         const end   = idx + term.length;
         const before = text[start - 1] || ' ';
         const after  = text[end]     || ' ';
-        if (before.match(/[\s,.]/) && after.match(/[\s,.]|$/)) {
+        
+        // Verifica se questa parte di testo è già stata evidenziata
+        const isOverlapping = markedRanges.some(
+          range => (start >= range.start && start < range.end) || 
+                  (end > range.start && end <= range.end) ||
+                  (start <= range.start && end >= range.end)
+        );
+        
+        // Aggiungi il match solo se non si sovrappone e rispetta i criteri di parola intera
+        if (!isOverlapping && before.match(/[\s,.]/) && after.match(/[\s,.]|$/)) {
           matches.push({ term, start, end });
+          markedRanges.push({ start, end });
         }
         idx = lower.indexOf(norm, idx + 1);
       }
