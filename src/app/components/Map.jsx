@@ -2,6 +2,16 @@
 import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Categorie predefinite
+const CATEGORIES = [
+  { id: 'all', name: 'Tutti' },
+  { id: 'restaurant', name: 'Ristoranti' },
+  { id: 'hotel', name: 'Hotel' },
+  { id: 'attraction', name: 'Attrazioni' },
+  { id: 'beach', name: 'Spiagge' },
+];
 
 // Componente per il controllo dello zoom
 const ZoomControl = () => {
@@ -121,72 +131,16 @@ const Map = () => {
   const [isCreatingRoute, setIsCreatingRoute] = useState(false);
   const [routePoints, setRoutePoints] = useState([]);
   const [savedRoutes, setSavedRoutes] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Coordinate di Taormina
+  // Coordinate di Taormina (default)
   const TAORMINA_CENTER = [37.8516, 15.2853];
 
   // Categorie dei punti di interesse
-  const CATEGORIES = [
-    { id: 'all', name: 'Tutti' },
-    { id: 'monuments', name: 'Monumenti' },
-    { id: 'shopping', name: 'Shopping' },
-    { id: 'beaches', name: 'Spiagge' },
-    { id: 'restaurants', name: 'Ristoranti' }
-  ];
-
-  // Punti di interesse di That's Taormina
-  const POINTS_OF_INTEREST = [
-    {
-      id: 1,
-      name: 'Teatro Antico',
-      description: 'Antico teatro greco-romano con vista mozzafiato sul mare e sull\'Etna',
-      position: [37.8525, 15.2893],
-      category: 'monuments',
-      price: '€12',
-      openingHours: '9:00 - 19:00',
-      image: '/images/teatro-antico.jpg'
-    },
-    {
-      id: 2,
-      name: 'Corso Umberto',
-      description: 'La via principale di Taormina, ricca di negozi e ristoranti',
-      position: [37.8516, 15.2833],
-      category: 'shopping',
-      price: 'Gratuito',
-      openingHours: 'Sempre aperto',
-      image: '/images/corso-umberto.jpg'
-    },
-    {
-      id: 3,
-      name: 'Isola Bella',
-      description: 'Splendida isola collegata alla terraferma da una sottile striscia di sabbia',
-      position: [37.8512, 15.2998],
-      category: 'beaches',
-      price: '€4',
-      openingHours: '9:00 - 19:00',
-      image: '/images/isola-bella.jpg'
-    },
-    {
-      id: 4,
-      name: 'Piazza IX Aprile',
-      description: 'Piazza panoramica con vista sul mare e sull\'Etna',
-      position: [37.8517, 15.2839],
-      category: 'monuments',
-      price: 'Gratuito',
-      openingHours: 'Sempre aperto',
-      image: '/images/piazza-ix-aprile.jpg'
-    },
-    {
-      id: 5,
-      name: 'Ristorante Al Duomo',
-      description: 'Ristorante tradizionale siciliano con terrazza panoramica',
-      position: [37.8518, 15.2836],
-      category: 'restaurants',
-      price: '€€€',
-      openingHours: '12:00 - 23:00',
-      image: '/images/al-duomo.jpg'
-    }
-  ];
+  const [categories, setCategories] = useState([
+    { id: 'all', name: 'Tutti' }
+  ]);
 
   // Stile personalizzato per i marker
   const customIcon = new L.Icon({
@@ -197,16 +151,146 @@ const Map = () => {
     popupAnchor: [1, -34],
     shadowSize: [41, 41]
   });
+  
+  // Funzione per caricare le attività dalla API
+  const fetchActivities = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/get-activities');
+      if (!response.ok) throw new Error('Errore nel caricamento delle attività');
+      const data = await response.json();
+      
+      // Formatta le attività per la mappa
+      const formattedActivities = (data.activities || []).map(activity => {
+        // Assicurati che ogni attività abbia una posizione valida
+        let position = activity.position;
+        
+        // Se la posizione è una stringa (formato "lat,lng"), convertila in array
+        if (typeof activity.position === 'string') {
+          const coords = activity.position.split(',').map(coord => parseFloat(coord.trim()));
+          if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+            position = coords;
+          } else {
+            // Posizione predefinita se non valida
+            position = TAORMINA_CENTER;
+          }
+        } else if (!Array.isArray(activity.position) || activity.position.length !== 2) {
+          // Usa coordinate predefinite se la posizione non è valida
+          position = TAORMINA_CENTER;
+        }
+        
+        return {
+          ...activity,
+          position,
+          // Assicurati che ci siano tutti i campi necessari
+          name: activity.name || 'Senza nome',
+          description: activity.description || '',
+          category: activity.category || 'altro',
+          price: activity.price || 'N/D',
+          openingHours: activity.openingHours || 'N/D'
+        };
+      });
+      
+      setActivities(formattedActivities);
+      
+      // Estrai le categorie uniche dalle attività
+      const uniqueCategories = [...new Set(formattedActivities.map(a => a.category).filter(Boolean))];
+      setCategories([
+        { id: 'all', name: 'Tutti' },
+        ...uniqueCategories.map(cat => ({ id: cat, name: cat }))
+      ]);
+      
+      // Salva nella cache con timestamp
+      localStorage.setItem('activitiesCache', JSON.stringify(formattedActivities));
+      localStorage.setItem('activitiesCacheTimestamp', Date.now().toString());
+      
+      setLoading(false);
+    } catch (error) {
+      console.error('Errore nel caricamento delle attività:', error);
+      
+      // Prova a caricare dalla cache se disponibile
+      const cachedActivities = localStorage.getItem('activitiesCache');
+      if (cachedActivities) {
+        setActivities(JSON.parse(cachedActivities));
+      }
+      
+      setLoading(false);
+    }
+  };
+  
+  // Verifica se è necessario aggiornare i dati
+  const shouldRefreshData = () => {
+    // Forza l'aggiornamento all'apertura dell'app
+    const lastVisit = sessionStorage.getItem('lastMapVisit');
+    if (!lastVisit) {
+      sessionStorage.setItem('lastMapVisit', Date.now().toString());
+      return true;
+    }
+    
+    // Verifica anche se i dati sono vecchi (più di 1 ora)
+    const cacheTimestamp = localStorage.getItem('activitiesCacheTimestamp');
+    if (!cacheTimestamp) return true;
+    
+    const now = Date.now();
+    const lastUpdate = parseInt(cacheTimestamp, 10);
+    const oneHour = 60 * 60 * 1000;
+    
+    return (now - lastUpdate) > oneHour;
+  };
 
+  // Carica i dati all'apertura dell'applicazione e quando necessario
   useEffect(() => {
     setIsClient(true);
+    
+    // Verifica se ci sono dati in cache
+    const cachedActivities = localStorage.getItem('activitiesCache');
+    
+    if (cachedActivities && !shouldRefreshData()) {
+      // Usa i dati dalla cache
+      const parsedActivities = JSON.parse(cachedActivities);
+      setActivities(parsedActivities);
+      
+      // Estrai le categorie uniche dalle attività
+      const uniqueCategories = [...new Set(parsedActivities.map(a => a.category).filter(Boolean))];
+      setCategories([
+        { id: 'all', name: 'Tutti' },
+        ...uniqueCategories.map(cat => ({ id: cat, name: cat }))
+      ]);
+      
+      setLoading(false);
+    } else {
+      // Carica i dati freschi dalla API
+      fetchActivities();
+    }
+  }, []);
+  
+  // Aggiorna i dati quando la finestra viene rimessa in primo piano
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const lastVisit = sessionStorage.getItem('lastMapVisit');
+        const now = Date.now();
+        
+        // Se sono passati più di 5 minuti dall'ultima visita, aggiorna i dati
+        if (lastVisit && (now - parseInt(lastVisit, 10)) > 5 * 60 * 1000) {
+          sessionStorage.setItem('lastMapVisit', now.toString());
+          fetchActivities();
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Filtra i punti di interesse in base alla categoria e alla ricerca
-  const filteredPOIs = POINTS_OF_INTEREST.filter(poi => {
+  const filteredPOIs = activities.filter(poi => {
     const matchesCategory = selectedCategory === 'all' || poi.category === selectedCategory;
     const matchesSearch = poi.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         poi.description.toLowerCase().includes(searchQuery.toLowerCase());
+                         (poi.description && poi.description.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
@@ -242,10 +326,11 @@ const Map = () => {
     }
   };
 
-  if (!isClient) {
+  if (!isClient || loading) {
     return (
       <div className="h-full w-full flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent"></div>
+        {loading && isClient && <p className="ml-3 text-gray-600">Caricamento attività...</p>}
       </div>
     );
   }
@@ -253,7 +338,7 @@ const Map = () => {
   return (
     <div className="relative h-full w-full">
       <MapControls
-        categories={CATEGORIES}
+        categories={categories}
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
         onSearch={setSearchQuery}
@@ -317,7 +402,7 @@ const Map = () => {
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <span className="font-semibold">Categoria:</span><br/>
-                    {CATEGORIES.find(c => c.id === poi.category)?.name}
+                    {categories.find(c => c.id === poi.category)?.name || poi.category}
                   </div>
                   <div>
                     <span className="font-semibold">Prezzo:</span><br/>
@@ -354,7 +439,7 @@ const Map = () => {
           <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="font-semibold text-gray-700">Categoria:</span>
-              <p className="text-gray-600">{CATEGORIES.find(c => c.id === selectedPOI.category)?.name}</p>
+              <p className="text-gray-600">{categories.find(c => c.id === selectedPOI.category)?.name || selectedPOI.category}</p>
             </div>
             <div>
               <span className="font-semibold text-gray-700">Prezzo:</span>

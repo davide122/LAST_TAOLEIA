@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { FiActivity, FiUsers, FiMail, FiMap, FiLogOut, FiHome, FiMenu, FiX, FiMessageSquare } from 'react-icons/fi';
+import { FiActivity, FiUsers, FiMail, FiMap, FiLogOut, FiHome, FiMenu, FiX, FiMessageSquare, FiSearch } from 'react-icons/fi';
 
 const Sidebar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -33,6 +33,7 @@ const Sidebar = () => {
     { id: 'emails', label: 'Email', icon: FiMail, href: '/backoffice/emails' },
     { id: 'itineraries', label: 'Itinerari', icon: FiMap, href: '/backoffice/itineraries' },
     { id: 'conversations', label: 'Conversazioni', icon: FiMessageSquare, href: '/backoffice/conversations' },
+    { id: 'keywords', label: 'Parole Chiave', icon: FiSearch, href: '/backoffice/keywords' },
   ];
 
   const isActive = (href) => {

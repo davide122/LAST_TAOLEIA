@@ -39,7 +39,7 @@ export async function POST(req) {
         },
         body: JSON.stringify({
           text,
-          model_id: 'eleven_turbo_v2_5',
+          model_id: 'eleven_flash_v2_5',
           stream:   false,
           voice_settings: {
             stability: 0.5,

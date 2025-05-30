@@ -9,11 +9,6 @@ export default function LanguageSelector({ currentLanguage, onLanguageChange }) 
     { code: 'fr', name: 'Français' },
     { code: 'es', name: 'Español' },
     { code: 'de', name: 'Deutsch' },
-    { code: 'pt', name: 'Português' },
-    { code: 'ru', name: 'Русский' },
-    { code: 'zh', name: '中文' },
-    { code: 'ja', name: '日本語' },
-    { code: 'ar', name: 'العربية' }
   ];
 
   return (

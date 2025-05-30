@@ -15,7 +15,7 @@ import './central-audio-player.css';
 import './components/InstallPWA.css';
 import MapView from './components/MapView';
 import NewsletterForm from './components/newsletter/NewsletterForm';
-import { useAudioPlayer } from './hooks/useAudioPlayer';
+// Rimosso import useAudioPlayer poiché utilizziamo solo useAudioManager
 import ChatMessages from './components/ChatMessages';
 import ChatInput from './components/ChatInput';
 import LanguageSelector from './components/languageselector.jsx';
@@ -45,17 +45,13 @@ export default function TaoleiaChat() {
   const UI_THROTTLE_MS = 100;
   const lastUiUpdateRef = useRef(0);
 
-  const audioInitRef       = useRef(false);
-  const mediaSourceRef     = useRef(null);
-  const sourceBufferRef    = useRef(null);
-  const audioElementRef    = useRef(null);
+  // Rimossi riferimenti a useAudioPlayer
 
   const endRef             = useRef(null);
 
   const [videoTtsText, setVideoTtsText] = useState('');
 
   const welcomeMessageSentRef = useRef(false);
-  const { playTTS } = useAudioPlayer();
 
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const audioRef = useRef(null);
@@ -68,7 +64,7 @@ export default function TaoleiaChat() {
     logError 
   } = useConversationLogger();
 
-  const { playAudio, isPlaying, togglePlayPause, audioElementRef: audioManagerRef } = useAudioManager();
+  const { playAudio, isPlaying, togglePlayPause, stopCurrentAudio, audioElementRef: audioManagerRef } = useAudioManager();
   
   // Inizializza l'hook per i dati offline
   const { 
@@ -90,27 +86,14 @@ export default function TaoleiaChat() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
   
-  // --- EFFECT: pulizia risorse audio quando si cambia scheda ---
+  // --- EFFECT: ferma l'audio quando si cambia scheda ---
   useEffect(() => {
-    // Pulisci le risorse audio quando l'utente cambia scheda
-    if (activeTab !== 'chat' && audioInitRef.current) {
-      try {
-        if (mediaSourceRef.current && mediaSourceRef.current.readyState !== 'closed') {
-          mediaSourceRef.current.endOfStream();
-        }
-        if (audioElementRef.current) {
-          audioElementRef.current.pause();
-          audioElementRef.current.src = '';
-          URL.revokeObjectURL(audioElementRef.current.src);
-        }
-        sourceBufferRef.current = null;
-        audioInitRef.current = false;
-        console.log('Risorse audio pulite dopo cambio scheda');
-      } catch (err) {
-        console.error('Errore durante la pulizia delle risorse audio:', err);
-      }
+    // Ferma l'audio quando l'utente cambia scheda
+    if (activeTab !== 'chat' && isPlaying) {
+      stopCurrentAudio();
+      console.log('Audio fermato dopo cambio scheda');
     }
-  }, [activeTab]);
+  }, [activeTab, isPlaying, stopCurrentAudio]);
 
   // --- EFFECT: Registrazione del service worker ---
   useEffect(() => {
@@ -174,6 +157,9 @@ export default function TaoleiaChat() {
           
           // Utilizziamo il messaggio di benvenuto tradotto nella lingua selezionata
           const welcomeMessage = welcomeMessages[storedLanguage] || welcomeMessages.it;
+          
+          // Ferma qualsiasi audio in riproduzione prima di iniziare
+          stopCurrentAudio();
           
           // Aggiungi il messaggio di benvenuto all'UI come messaggio utente
           setMessages(m => [...m, { role: 'user', content: welcomeMessage }]);
@@ -258,8 +244,11 @@ export default function TaoleiaChat() {
             });
           }
           
-          // Riproduci l'audio della risposta
-          await playTTS(full);
+          // Ferma qualsiasi audio in riproduzione prima di riprodurre il nuovo
+          stopCurrentAudio();
+          
+          // Riproduci l'audio della risposta usando il sistema centralizzato
+          await playAudio(full);
 
           welcomeMessageSentRef.current = true;
         } catch (error) {
@@ -272,7 +261,7 @@ export default function TaoleiaChat() {
       
       return () => clearTimeout(timer);
     }
-  }, [loading, messages.length, conversationId, logMessage, logError, playTTS]);
+  }, [loading, messages.length, conversationId, logMessage, logError]);
 
   // --- EFFECT: init Web Speech ---
   useEffect(() => {
@@ -536,6 +525,9 @@ export default function TaoleiaChat() {
     setLoading(true);
     setInput('');
     
+    // Ferma qualsiasi audio in riproduzione prima di iniziare
+    stopCurrentAudio();
+    
     try {
       // Aggiungi il messaggio dell'utente
       setMessages(prev => [...prev, { role: 'user', content: text }]);
@@ -645,7 +637,10 @@ export default function TaoleiaChat() {
         });
       }
 
-      // Riproduci l'audio della risposta usando il nuovo sistema
+      // Ferma qualsiasi audio in riproduzione prima di riprodurre il nuovo
+      stopCurrentAudio();
+      
+      // Riproduci l'audio della risposta usando il sistema centralizzato
       await playAudio(full);
 
     } catch (error) {

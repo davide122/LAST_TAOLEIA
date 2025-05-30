@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FiActivity, FiUsers, FiMail, FiMap, FiLogOut, FiHome, FiSettings, FiHelpCircle } from 'react-icons/fi';
+import { FiActivity, FiUsers, FiMail, FiMap, FiLogOut, FiHome, FiSettings, FiHelpCircle, FiGlobe } from 'react-icons/fi';
 
 export default function BackofficePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -53,6 +53,7 @@ export default function BackofficePage() {
     { id: 'users', label: 'Utenti', icon: FiUsers, href: '/backoffice/users' },
     { id: 'emails', label: 'Email', icon: FiMail, href: '/backoffice/emails' },
     { id: 'itineraries', label: 'Itinerari', icon: FiMap, href: '/backoffice/itineraries' },
+    { id: 'translations', label: 'Traduzioni', icon: FiGlobe, href: '/backoffice/translations' },
   ];
 
   return (
@@ -116,6 +117,7 @@ export default function BackofficePage() {
                     {item.id === 'users' && 'Amministra gli utenti registrati nel sistema.'}
                     {item.id === 'emails' && 'Monitora le email inviate e gestisci le newsletter.'}
                     {item.id === 'itineraries' && 'Crea e gestisci itinerari personalizzati con timeline delle attività.'}
+                    {item.id === 'translations' && 'Gestisci le traduzioni delle categorie e visualizza le traduzioni esistenti.'}
                   </p>
                 </div>
               </Link>
