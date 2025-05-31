@@ -158,32 +158,7 @@ export async function POST(req) {
                 }
               }
             },
-            {
-              type: 'function',
-              function: {
-                name: 'open_menu',
-                description: 'Apri menu categoria e consigli',
-                parameters: {
-                  type: 'object',
-                  properties: {
-                    category: {
-                      type: 'string',
-                      description: 'Nome della categoria da aprire nel menu'
-                    },
-                    recommendations: {
-                      type: 'array',
-                      description: 'Lista di raccomandazioni da mostrare',
-                      items: {
-                        type: 'string',
-                        description: 'Raccomandazione specifica'
-                      }
-                    }
-                  },
-                  required: ['category', 'recommendations'],
-                  additionalProperties: false
-                }
-              }
-            }
+            
           ]
         })
       }
