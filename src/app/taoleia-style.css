@@ -277,7 +277,7 @@
 }
 
 .accessibility-toggle-button {
-  background-color: rgba(10, 59, 59, 0.8);
+  /* background-color: rgba(10, 59, 59, 0.8);
   color: #F5EFE0;
   border: none;
   border-radius: 50%;
@@ -289,6 +289,7 @@
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   transition: all 0.2s ease;
+  right: 200px; */
 }
 
 .accessibility-toggle-button:hover {
@@ -643,11 +644,16 @@
   .accessibility-toggle-button {
     width: 2.5rem;
     height: 2.5rem;
+    position: absolute;
+ 
+    right: 340px;
   }
   
   .accessibility-panel {
     width: 250px;
     padding: 1rem;
+     right: 100px;
+     top: 40px;
   }
   
   .nav-bar {

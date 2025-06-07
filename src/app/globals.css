@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 html{
-  background-color: #0e3740;
+background-color: white !important;
 }
 :root {
-  --background: #ffffff;
-  --foreground: #0e3740;
+  --background: #ffffff !important;
+ 
 }
 
 @theme inline {
@@ -44,7 +44,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #0e3740;
+  
 }
 
 

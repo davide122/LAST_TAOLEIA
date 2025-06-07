@@ -80,6 +80,13 @@ export default function ActivityCard({
       fr: 'Guide Audio',
       es: 'Guía de Audio',
       de: 'Audio-Führung'
+    },
+    listenMore: {
+      it: 'Ascolta l\'audio guida per saperne di più',
+      en: 'Listen to the audio guide to learn more',
+      fr: 'Écoutez le guide audio pour en savoir plus',
+      es: 'Escucha la guía de audio para saber más',
+      de: 'Hören Sie den Audio-Guide, um mehr zu erfahren'
     }
   };
 
@@ -148,23 +155,40 @@ export default function ActivityCard({
                 aria-label={`Immagine ${i+1} di ${total}`}
                 tabIndex={i === current ? 0 : -1}
                 onClick={() => setCurrent(i)}
-                onKeyDown={(e) => e.key === 'Enter' && setCurrent(i)}
               />
             ))}
           </div>
         </div>
       )}
 
-      {/* Contenuto scrollabile */}
-      <div className="px-6 py-4 overflow-y-auto">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2" id="activity-title">{name}</h3>
-         {audio_guide_text && (
+      <div className="p-4 flex-1 overflow-y-auto">
+        <h2 className="text-xl font-bold mb-2 text-gray-900">{name}</h2>
+        <p className="text-gray-700 mb-4">{description}</p>
+
+        {/* Menu */}
+        {menu && (
+          <div className="my-4 border-t pt-4">
+            <div className="font-medium mb-2 text-gray-800">{translations.menu[currentLang]}</div>
+            <div className="text-gray-700">{menu}</div>
+          </div>
+        )}
+
+        {/* Prezzi */}
+        {prices && (
+          <div className="my-4 border-t pt-4">
+            <div className="font-medium mb-2 text-gray-800">{translations.prices[currentLang]}</div>
+            <div className="text-gray-700">{prices}</div>
+          </div>
+        )}
+
+        {/* Audio guida */}
+        {audio_guide_text && (
           <div className="my-4 border-t pt-4">
             <div className="font-medium mb-2 text-gray-800" id="audio-guide-label">{translations.audioGuide[currentLang]}</div>
             <AudioPlayer text={audio_guide_text} language={currentLang} aria-labelledby="audio-guide-label" />
           </div>
         )}
-        <p className="text-gray-700 mb-4">{description}</p>
+        <p className="text-gray-700 mb-4">{audio_guide_text.slice(0,100)+"... "+translations.listenMore[currentLang]}</p>
 
         <div className="text-gray-800 mb-4 space-y-1 text-sm" role="list" aria-label="Informazioni di contatto">
           <div role="listitem"><span className="font-medium">{translations.address[currentLang]}:</span> {address}</div>
@@ -187,33 +211,33 @@ export default function ActivityCard({
           {website && (
             <div role="listitem">
               <span className="font-medium">{translations.website[currentLang]}:</span>{' '}
-              <a href={website} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline" aria-label={`${translations.website[currentLang]}: ${website}`}>
+              <a 
+                href={website.startsWith('http') ? website : `https://${website}`} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-blue-600 hover:underline"
+                aria-label={`${translations.website[currentLang]}: ${website}`}
+              >
                 {website}
-              </a>
-            </div>
-          )}
-          {google_maps_url && (
-            <div role="listitem">
-              <span className="font-medium">{translations.map[currentLang]}:</span>{' '}
-              <a href={google_maps_url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline" aria-label={translations.map[currentLang]}>
-                {translations.map[currentLang]}
               </a>
             </div>
           )}
         </div>
 
-        {menu && (
-          <div className="mb-4 text-gray-600 text-sm">
-            <div className="font-medium mb-1" id="menu-label">{translations.menu[currentLang]}:</div>
-            <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded" aria-labelledby="menu-label">{menu}</pre>
-          </div>
-        )}
-
-        {prices && (
-          <div className="text-gray-600 text-sm mb-4">
-            <div className="font-medium mb-1" id="prices-label">{translations.prices[currentLang]}:</div>
-            <pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded" aria-labelledby="prices-label">{prices}</pre>
-          </div>
+        {/* Link a Google Maps */}
+        {google_maps_url && (
+          <a 
+            href={google_maps_url} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="inline-flex items-center text-blue-600 hover:underline"
+            aria-label={translations.map[currentLang]}
+          >
+            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+            </svg>
+            {translations.map[currentLang]}
+          </a>
         )}
       </div>
     </div>

@@ -1,9 +1,20 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 export function useAudioManager() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const currentAudioRef = useRef(null);
   const audioElementRef = useRef(null);
+  
+  // Carica le preferenze audio salvate quando il componente viene montato
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedAudioPreference = localStorage.getItem('taoleia-audio-enabled');
+      if (savedAudioPreference !== null) {
+        setIsAudioEnabled(savedAudioPreference === 'true');
+      }
+    }
+  }, []);
 
   const stopCurrentAudio = () => {
     if (currentAudioRef.current) {
@@ -19,6 +30,9 @@ export function useAudioManager() {
 
   const playAudio = async (text) => {
     if (!text.trim()) return;
+    
+    // Se l'audio è disabilitato, non fare nulla
+    if (!isAudioEnabled) return;
 
     try {
       // Ferma qualsiasi audio in riproduzione
@@ -80,11 +94,25 @@ export function useAudioManager() {
     }
   };
 
+  // Funzione per attivare/disattivare l'audio
+  const toggleAudioEnabled = () => {
+    const newState = !isAudioEnabled;
+    setIsAudioEnabled(newState);
+    localStorage.setItem('taoleia-audio-enabled', newState.toString());
+    
+    // Se stiamo disabilitando l'audio e c'è un audio in riproduzione, fermalo
+    if (!newState && isPlaying) {
+      stopCurrentAudio();
+    }
+  };
+
   return {
     playAudio,
     stopCurrentAudio,
     togglePlayPause,
     isPlaying,
-    audioElementRef
+    audioElementRef,
+    isAudioEnabled,
+    toggleAudioEnabled
   };
 }

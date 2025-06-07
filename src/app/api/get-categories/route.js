@@ -6,7 +6,7 @@ export async function GET(req) {
   try {
     // Ottieni il parametro language dalla query string, se presente
     const { searchParams } = new URL(req.url);
-    const language = searchParams.get('language') || 'it'; // Default a italiano se non specificato
+    const language = searchParams.get('language') || 'it'; // Default a italiano se non specificato, ma ora è opzionale
     
     const client = await pool.connect();
     try {
@@ -38,29 +38,34 @@ export async function GET(req) {
         ORDER BY category
       `);
       
-      // 3. Ottieni le traduzioni delle categorie per la lingua richiesta
+      // 3. Ottieni TUTTE le traduzioni delle categorie per tutte le lingue
       const translationsResult = await client.query(`
         SELECT
           category_name,
-          translated_name
+          translated_name,
+          language_code
         FROM category_translations
-        WHERE language_code = $1
-      `, [language]);
+      `);
       
       // Log per debug - mostra tutte le traduzioni disponibili
       console.log('Traduzioni disponibili nel database:');
       translationsResult.rows.forEach(row => {
-        console.log(`- "${row.category_name}" => "${row.translated_name}"`);
+        console.log(`- "${row.category_name}" => "${row.translated_name}" (${row.language_code})`);
       });
       
-      // Crea una mappa delle traduzioni per un accesso più veloce
+      // Crea una mappa delle traduzioni organizzata per lingua
       const translationsMap = {};
       translationsResult.rows.forEach(row => {
+        // Inizializza l'oggetto per la lingua se non esiste
+        if (!translationsMap[row.language_code]) {
+          translationsMap[row.language_code] = {};
+        }
+        
         // Normalizza la chiave per evitare problemi di formattazione
         const normalizedKey = row.category_name.trim().toLowerCase();
-        translationsMap[normalizedKey] = row.translated_name;
+        translationsMap[row.language_code][normalizedKey] = row.translated_name;
         // Mantieni anche la versione originale per compatibilità
-        translationsMap[row.category_name] = row.translated_name;
+        translationsMap[row.language_code][row.category_name] = row.translated_name;
       });
       
       // 4. Combina i risultati
@@ -92,27 +97,47 @@ export async function GET(req) {
         // Normalizza la categoria per la ricerca
         const normalizedCategory = cat.category.trim().toLowerCase();
         
-        // Prova diverse varianti per trovare una traduzione
-        let translation = null;
+        // Inizializza l'oggetto delle traduzioni per questa categoria
+        cat.translations = {};
         
-        // 1. Prova con la categoria normalizzata
-        if (translationsMap[normalizedCategory]) {
-          translation = translationsMap[normalizedCategory];
-        }
-        // 2. Prova con la categoria originale
-        else if (translationsMap[cat.category]) {
-          translation = translationsMap[cat.category];
-        }
-        // 3. Prova con la categoria senza spazi iniziali/finali
-        else if (translationsMap[cat.category.trim()]) {
-          translation = translationsMap[cat.category.trim()];
-        }
+        // Aggiungi la categoria originale come traduzione di default per tutte le lingue
+        const supportedLanguages = ['it', 'en', 'fr', 'de', 'es'];
+        supportedLanguages.forEach(lang => {
+          cat.translations[lang] = cat.category;
+        });
         
-        // Assegna la traduzione trovata o usa il nome originale
-        cat.translated_name = translation || cat.category;
+        // Aggiungi tutte le traduzioni disponibili
+        Object.keys(translationsMap).forEach(lang => {
+          // Prova diverse varianti per trovare una traduzione
+          let translation = null;
+          
+          // 1. Prova con la categoria normalizzata
+          if (translationsMap[lang][normalizedCategory]) {
+            translation = translationsMap[lang][normalizedCategory];
+          }
+          // 2. Prova con la categoria originale
+          else if (translationsMap[lang][cat.category]) {
+            translation = translationsMap[lang][cat.category];
+          }
+          // 3. Prova con la categoria senza spazi iniziali/finali
+          else if (translationsMap[lang][cat.category.trim()]) {
+            translation = translationsMap[lang][cat.category.trim()];
+          }
+          
+          // Assegna la traduzione trovata o mantieni il nome originale
+          if (translation) {
+            cat.translations[lang] = translation;
+          }
+        });
+        
+        // Mantieni la compatibilità con il codice esistente usando la lingua richiesta
+        cat.translated_name = cat.translations[language] || cat.category;
         
         // Aggiungi log per debug
-        console.log(`Categoria: "${cat.category}", Normalizzata: "${normalizedCategory}", Traduzione: "${cat.translated_name}", Trovata: ${!!translation}`);
+        console.log(`Categoria: "${cat.category}", Traduzioni disponibili: ${Object.keys(cat.translations).join(', ')}`);
+        Object.entries(cat.translations).forEach(([lang, translation]) => {
+          console.log(`  - ${lang}: "${translation}"`);
+        });
       });
 
       // rows = [ { category: 'Sport', translated_name: 'Sports', names: ['Calcio','Tennis',...] }, ... ]

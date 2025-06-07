@@ -12,6 +12,7 @@ import { welcomeMessages } from './config/welcomeMessages';
 import '../chat.css';
 import './taoleia-style.css';
 import './central-audio-player.css';
+import './audio-toggle.css';
 import './components/InstallPWA.css';
 import MapView from './components/MapView';
 import NewsletterForm from './components/newsletter/NewsletterForm';
@@ -22,6 +23,7 @@ import LanguageSelector from './components/languageselector.jsx';
 import { useConversationLogger } from '../hooks/useConversationLogger';
 import { useAudioManager } from './hooks/useAudioManager';
 import CentralAudioPlayer from './components/CentralAudioPlayer';
+import AudioToggle from './components/AudioToggle';
 import AccessibilityMenu from './components/AccessibilityMenu';
 import LoadingIndicator from './components/LoadingIndicator';
 import InstallPWA from './components/InstallPWA';
@@ -64,7 +66,7 @@ export default function TaoleiaChat() {
     logError 
   } = useConversationLogger();
 
-  const { playAudio, isPlaying, togglePlayPause, stopCurrentAudio, audioElementRef: audioManagerRef } = useAudioManager();
+  const { playAudio, isPlaying, togglePlayPause, stopCurrentAudio, audioElementRef: audioManagerRef, isAudioEnabled, toggleAudioEnabled } = useAudioManager();
   
   // Inizializza l'hook per i dati offline
   const { 
@@ -707,7 +709,7 @@ export default function TaoleiaChat() {
     <AccessibilityMenu />
 
     {/* Video con bordi arrotondati */}
-    <div className="absolute top-0 left-0 w-full h-[30vh] z-50 overflow-hidden rounded-3xl p-3">
+    <div className="absolute top-0 left-0 w-full h-[30vh] z-50 overflow-hidden ">
       <VideoPlayer
         videoUrl="/parla.mp4"
         isPlaying={isPlaying}
@@ -719,6 +721,12 @@ export default function TaoleiaChat() {
         audioRef={audioManagerRef}
         isPlaying={isPlaying}
         onPlayPause={togglePlayPause}
+      />
+      
+      {/* Pulsante per attivare/disattivare l'audio */}
+      <AudioToggle 
+        isAudioEnabled={isAudioEnabled}
+        onToggle={toggleAudioEnabled}
       />
     </div>
     
@@ -739,7 +747,10 @@ export default function TaoleiaChat() {
           <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3" role="list" aria-live="polite">
             <ChatMessages
               messages={messages}
-              onCategoryClick={(category) => sendMessage(`Parlami di ${category}`)}
+              onCategoryClick={(clickedText) => {
+                  // Ora riceviamo direttamente il testo cliccato invece dell'oggetto categoria
+                  sendMessage(`Parlami di ${clickedText}`);
+                }}
               UI_THROTTLE_MS={UI_THROTTLE_MS}
               lastUiUpdateRef={lastUiUpdateRef}
               loading={loading}

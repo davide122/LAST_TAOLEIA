@@ -1,0 +1,32 @@
+/* Stili per il pulsante di attivazione/disattivazione audio */
+.audio-toggle-container {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  z-index: 70;
+}
+
+.audio-toggle-button {
+  background-color: rgba(10, 59, 59, 0.8);
+  color: #F5EFE0;
+  border: 1px solid rgba(245, 239, 224, 0.3);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.audio-toggle-button:hover {
+  background-color: rgba(10, 59, 59, 1);
+  transform: scale(1.05);
+}
+
+.audio-toggle-button svg {
+  width: 20px;
+  height: 20px;
+}

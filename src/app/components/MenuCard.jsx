@@ -3,13 +3,41 @@
 import { useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 
-export default function MenuCard({ category, recommendations, timestamp, type }) {
+export default function MenuCard({ category, recommendations, timestamp, type, language_code }) {
   const [expanded, setExpanded] = useState(true);
 
   // Se non ci sono dati validi, non mostrare nulla
   if (!category || !recommendations || !Array.isArray(recommendations)) {
     return null;
   }
+
+  // Traduzioni per le etichette dell'interfaccia
+  const translations = {
+    recommendations: {
+      it: 'Raccomandazioni:',
+      en: 'Recommendations:',
+      fr: 'Recommandations:',
+      es: 'Recomendaciones:',
+      de: 'Empfehlungen:'
+    },
+    expand: {
+      it: 'Espandi sezione',
+      en: 'Expand section',
+      fr: 'Développer la section',
+      es: 'Expandir sección',
+      de: 'Abschnitt erweitern'
+    },
+    collapse: {
+      it: 'Comprimi sezione',
+      en: 'Collapse section',
+      fr: 'Réduire la section',
+      es: 'Contraer sección',
+      de: 'Abschnitt reduzieren'
+    }
+  };
+
+  // Usa la lingua corrente o fallback a italiano
+  const currentLang = language_code && translations.recommendations[language_code] ? language_code : 'it';
 
   const headingId = `category-heading-${category.replace(/\s+/g, '-').toLowerCase()}`;
   const contentId = `category-content-${category.replace(/\s+/g, '-').toLowerCase()}`;
@@ -33,7 +61,7 @@ export default function MenuCard({ category, recommendations, timestamp, type })
         <h3 className="text-lg font-semibold" id={headingId}>{category}</h3>
         <button 
           className="text-white"
-          aria-label={expanded ? 'Comprimi sezione' : 'Espandi sezione'}
+          aria-label={expanded ? translations.collapse[currentLang] : translations.expand[currentLang]}
         >
           {expanded ? (
             <ChevronUpIcon className="h-5 w-5" aria-hidden="true" />
@@ -46,7 +74,7 @@ export default function MenuCard({ category, recommendations, timestamp, type })
       {/* Contenuto espandibile */}
       {expanded && (
         <div className="p-4" id={contentId}>
-          <h4 className="text-md font-medium mb-2" id="recommendations-heading">Raccomandazioni:</h4>
+          <h4 className="text-md font-medium mb-2" id="recommendations-heading">{translations.recommendations[currentLang]}</h4>
           <ul 
             className="list-disc pl-5 space-y-1" 
             aria-labelledby="recommendations-heading"

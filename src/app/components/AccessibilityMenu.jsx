@@ -78,41 +78,7 @@ export default function AccessibilityMenu() {
           <h3>Accessibilità</h3>
           
           <div className="accessibility-section">
-            <h4 id="font-size-label">Dimensione testo</h4>
-            <div className="accessibility-controls" role="radiogroup" aria-labelledby="font-size-label">
-              <button 
-                className={`accessibility-button ${fontSize === 'small' ? 'active' : ''}`}
-                onClick={() => changeFontSize('small')}
-                aria-checked={fontSize === 'small'}
-                role="radio"
-              >
-                Piccolo
-              </button>
-              <button 
-                className={`accessibility-button ${fontSize === 'medium' ? 'active' : ''}`}
-                onClick={() => changeFontSize('medium')}
-                aria-checked={fontSize === 'medium'}
-                role="radio"
-              >
-                Medio
-              </button>
-              <button 
-                className={`accessibility-button ${fontSize === 'large' ? 'active' : ''}`}
-                onClick={() => changeFontSize('large')}
-                aria-checked={fontSize === 'large'}
-                role="radio"
-              >
-                Grande
-              </button>
-              <button 
-                className={`accessibility-button ${fontSize === 'xlarge' ? 'active' : ''}`}
-                onClick={() => changeFontSize('xlarge')}
-                aria-checked={fontSize === 'xlarge'}
-                role="radio"
-              >
-                Molto grande
-              </button>
-            </div>
+       
           </div>
           
           <div className="accessibility-section">

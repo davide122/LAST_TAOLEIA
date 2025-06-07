@@ -21,12 +21,21 @@ export default function ChatMessages({
   // Determina se mostrare i pallini di caricamento
   const showLoadingDots = loading && messages.length > 0 && messages[messages.length - 1].role !== 'assistant';
 
+  // Ottieni la lingua preferita dal localStorage
+  const getPreferredLanguage = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('selectedLanguage') || localStorage.getItem('preferredLanguage') || 'it';
+    }
+    return 'it';
+  };
+
   // Funzione per renderizzare il contenuto del tool in base al tipo
   const renderToolContent = (data) => {
+    const currentLang = getPreferredLanguage();
     if (data.type === 'menu') {
-      return <MenuCard {...data} />;
+      return <MenuCard {...data} language_code={currentLang} />;
     }
-    return <ActivityCard {...data} />;
+    return <ActivityCard {...data} language_code={currentLang} />;
   };
 
   // Filtra i messaggi per nascondere il primo messaggio dell'utente (istruzioni)
@@ -53,7 +62,10 @@ export default function ChatMessages({
                 : 'message-assistant break-words'
             }>
               {m.role === 'assistant' ? (
-                <ClickableCategory onCategoryClick={onCategoryClick}>
+                <ClickableCategory 
+                  key={`message-${i}-${Date.now()}`} 
+                  onCategoryClick={onCategoryClick}
+                >
                   {m.content}
                 </ClickableCategory>
               ) : m.content}
