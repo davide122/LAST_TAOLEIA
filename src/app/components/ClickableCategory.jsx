@@ -14,7 +14,7 @@ export default function ClickableCategory({ children, onCategoryClick }) {
     const langParam = urlParams.get('lang');
     
     // Controlla se c'è una lingua salvata nel localStorage
-    const savedLang = localStorage.getItem('preferredLanguage');
+    const savedLang = localStorage.getItem('preferredLanguage') || localStorage.getItem('selectedLanguage');
     
     // Imposta la lingua corrente (priorità: URL > localStorage > default 'it')
     const detectedLang = langParam || savedLang || 'it';
@@ -33,14 +33,12 @@ export default function ClickableCategory({ children, onCategoryClick }) {
         if (data && data.categories && Array.isArray(data.categories)) {
           setItems(data.categories);
         } else {
-          console.error('Formato dati categorie non valido:', data);
           setItems([]);
         }
         localStorage.setItem('categoriesCache', JSON.stringify(data));
         localStorage.setItem('categoriesCacheTimestamp', Date.now().toString());
         setLoading(false);
       } catch (error) {
-        console.error('Errore nel caricamento delle categorie:', error);
         // Prova a usare i dati dalla cache se disponibili
         const cache = localStorage.getItem('categoriesCache');
         if (cache) {
@@ -50,7 +48,7 @@ export default function ClickableCategory({ children, onCategoryClick }) {
               setItems(data.categories);
             }
           } catch (e) {
-            console.error('Errore nel parsing della cache:', e);
+            // Errore silenzioso
           }
         }
         setLoading(false);
@@ -78,7 +76,6 @@ export default function ClickableCategory({ children, onCategoryClick }) {
             fetchCategories();
           }
         } catch (e) {
-          console.error('Errore nel parsing della cache:', e);
           fetchCategories();
         }
       } else {
@@ -97,7 +94,6 @@ export default function ClickableCategory({ children, onCategoryClick }) {
       .trim();
   };
 
-  // Memoizzazione della mappatura termini-categorie e dei termini ordinati
   const { termToCategory, sortedTerms } = useMemo(() => {
     // Mappa per associare termini normalizzati alle loro categorie
     const termMap = {};
@@ -157,7 +153,7 @@ export default function ClickableCategory({ children, onCategoryClick }) {
     const sortedTermsList = Array.from(terms).sort((a, b) => b.length - a.length);
     
     // Limita il numero di termini per migliorare le prestazioni
-    const MAX_TERMS = 500; // Aumentato da 200 a 500 per migliorare la copertura
+    const MAX_TERMS = 1000; // Aumentato da 500 a 1000 per migliorare la copertura
     const limitedTerms = sortedTermsList.slice(0, MAX_TERMS);
     
     return { termToCategory: termMap, sortedTerms: limitedTerms };
@@ -180,36 +176,59 @@ export default function ClickableCategory({ children, onCategoryClick }) {
       // Salta termini troppo corti
       if (norm.length < 3) continue;
       
-      // Cerca tutte le occorrenze del termine normalizzato
-      let idx = lower.indexOf(norm);
+      // Funzione per verificare se due parole sono simili (singolare/plurale)
+      const areSimilarWords = (word1, word2) => {
+        // Se le parole sono identiche, sono ovviamente simili
+        if (word1 === word2) return true;
+        
+        // Se una parola è molto più corta dell'altra, probabilmente non sono variazioni
+        if (Math.abs(word1.length - word2.length) > 3) return false;
+        
+        // Confronta le radici delle parole (ignora le ultime 1-3 lettere)
+        const minLength = Math.min(word1.length, word2.length);
+        const rootLength = Math.max(minLength - 3, 3); // Almeno 3 caratteri per la radice
+        
+        const root1 = word1.substring(0, rootLength);
+        const root2 = word2.substring(0, rootLength);
+        
+        return root1 === root2;
+      };
       
-      while (idx !== -1) {
-        const start = idx;
-        const end = idx + norm.length; // Usa la lunghezza del termine normalizzato
+      // Cerca tutte le occorrenze del termine normalizzato o parole simili
+      let idx = 0;
+      const words = lower.split(/[\s,.]+/);
+      
+      for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        if (word.length < 3) continue;
         
-        // Ottieni i caratteri prima e dopo per verificare che sia una parola intera
-        const before = lower[start - 1] || ' ';
-        const after = lower[end] || ' ';
-        
-        // Verifica se questa parte di testo è già stata evidenziata
-        const isOverlapping = markedRanges.some(
-          range => (start >= range.start && start < range.end) || 
-                  (end > range.start && end <= range.end) ||
-                  (start <= range.start && end >= range.end)
-        );
-        
-        // Aggiungi il match solo se non si sovrappone e rispetta i criteri di parola intera
-        if (!isOverlapping && before.match(/[\s,.]/) && after.match(/[\s,.]|$/)) {
-          // Trova la categoria associata a questo termine
-          const category = termToCategory[norm];
-          // Usa il testo originale per l'evidenziazione
-          const originalText = text.substring(start, end);
-          matches.push({ term: originalText, start, end, category });
-          markedRanges.push({ start, end });
+        // Verifica se la parola corrente è simile al termine cercato
+        if (areSimilarWords(word, norm)) {
+          // Trova la posizione della parola nel testo originale
+          const wordStart = lower.indexOf(word, idx);
+          if (wordStart === -1) continue;
+          
+          const wordEnd = wordStart + word.length;
+          idx = wordEnd;
+          
+          // Verifica se questa parte di testo è già stata evidenziata
+          const isOverlapping = markedRanges.some(
+            range => (wordStart >= range.start && wordStart < range.end) || 
+                    (wordEnd > range.start && wordEnd <= range.end) ||
+                    (wordStart <= range.start && wordEnd >= range.end)
+          );
+          
+          // Aggiungi il match solo se non si sovrappone
+          if (!isOverlapping) {
+            // Trova la categoria associata a questo termine
+            const category = termToCategory[norm];
+            
+            // Usa il testo originale per l'evidenziazione
+            const originalText = text.substring(wordStart, wordEnd);
+            matches.push({ term: originalText, start: wordStart, end: wordEnd, category });
+            markedRanges.push({ start: wordStart, end: wordEnd });
+          }
         }
-        
-        // Cerca la prossima occorrenza
-        idx = lower.indexOf(norm, idx + 1);
       }
     }
 
@@ -257,7 +276,7 @@ export default function ClickableCategory({ children, onCategoryClick }) {
           <span
             key={i}
             className="category-highlight"
-            onClick={() => onCategoryClick(p.content)}
+            onClick={() => onCategoryClick(`${p.content}`)}
             title={p.category ? (p.category.translations && p.category.translations[currentLanguage] || p.category.translated_name || p.category.category) : p.term}
           >
             {p.content}

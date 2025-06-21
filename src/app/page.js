@@ -28,6 +28,7 @@ import AccessibilityMenu from './components/AccessibilityMenu';
 import LoadingIndicator from './components/LoadingIndicator';
 import InstallPWA from './components/InstallPWA';
 import { useOfflineData } from '../hooks/useOfflineData';
+import LanguageModal from './components/LanguageModal';
 
 export default function TaoleiaChat() {
   // --- STATE & REF ---
@@ -41,6 +42,8 @@ export default function TaoleiaChat() {
   const [isOffline, setIsOffline] = useState(false);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
   const [serviceWorkerRegistered, setServiceWorkerRegistered] = useState(false);
+  const [languageSelected, setLanguageSelected] = useState(false); // Nuovo stato per tracciare se l'utente ha selezionato una lingua
+  const [showLanguageModal, setShowLanguageModal] = useState(true); // Mostra il modale di selezione lingua all'avvio
 
   const [isListeningChat, setIsListeningChat] = useState(false);
   const chatRecRef = useRef(null);
@@ -150,11 +153,13 @@ export default function TaoleiaChat() {
   
   // --- EFFECT: Messaggio di benvenuto ---
   useEffect(() => {
-    if (!welcomeMessageSentRef.current && !loading && messages.length === 0) {
+    console.log('Effect welcome message - languageSelected:', languageSelected, 'welcomeMessageSent:', welcomeMessageSentRef.current);
+    // Invia il messaggio di benvenuto solo se l'utente ha selezionato una lingua
+    if (languageSelected && !welcomeMessageSentRef.current && !loading && messages.length === 0) {
       const timer = setTimeout(async () => {
         try {
           // Recupera la lingua dal localStorage e aggiorna lo stato
-          const storedLanguage = localStorage.getItem('selectedLanguage') || 'it';
+          const storedLanguage = localStorage.getItem('selectedLanguage') || currentLanguage;
           setCurrentLanguage(storedLanguage);
           
           // Utilizziamo il messaggio di benvenuto tradotto nella lingua selezionata
@@ -165,6 +170,11 @@ export default function TaoleiaChat() {
           
           // Aggiungi il messaggio di benvenuto all'UI come messaggio utente
           setMessages(m => [...m, { role: 'user', content: welcomeMessage }]);
+          
+          // Aggiungi immediatamente un messaggio vuoto dell'assistente con indicatore di caricamento
+          // Questo verrà mostrato mentre aspettiamo la risposta
+          setLoading(true);
+          setMessages(m => [...m, { role: 'assistant', content: '' }]);
           
           // Log del messaggio dell'utente
           if (conversationId) {
@@ -186,9 +196,6 @@ export default function TaoleiaChat() {
           
           const newTid = res.headers.get('X-Thread-Id');
           if (newTid) setThreadId(newTid);
-          
-          // Aggiungi il placeholder del messaggio dell'assistente
-          setMessages(m => [...m, { role: 'assistant', content: '' }]);
 
           // Processa la risposta dell'assistente
           const reader = res.body.getReader();
@@ -237,6 +244,9 @@ export default function TaoleiaChat() {
             c[c.length-1].content = full;
             return c;
           });
+          
+          // Disattiva l'indicatore di caricamento
+          setLoading(false);
 
           // Log della risposta dell'assistente
           if (conversationId) {
@@ -263,7 +273,7 @@ export default function TaoleiaChat() {
       
       return () => clearTimeout(timer);
     }
-  }, [loading, messages.length, conversationId, logMessage, logError]);
+  }, [loading, messages.length, conversationId, logMessage, logError, languageSelected, currentLanguage, stopCurrentAudio, playAudio]);
 
   // --- EFFECT: init Web Speech ---
   useEffect(() => {
@@ -399,6 +409,10 @@ export default function TaoleiaChat() {
     console.log('Changing speech language to:', lang, speechLanguages[lang]);
     setCurrentLanguage(lang);
     localStorage.setItem('selectedLanguage', lang);
+    
+    // Imposta che l'utente ha selezionato una lingua e nascondi il modale
+    setLanguageSelected(true);
+    setShowLanguageModal(false);
     
     // Resetta lo stato del messaggio di benvenuto per permettere il reinvio
     welcomeMessageSentRef.current = false;
@@ -684,153 +698,163 @@ export default function TaoleiaChat() {
 
   // --- RENDER JSX ---
   return (
-  <div className="relative w-full h-screen max-w-xl mx-auto flex flex-col z-3 app"
-      style={{
-      paddingTop:    'env(safe-area-inset-top)',
-      paddingBottom: 'env(safe-area-inset-bottom)',
-    }}
-  >
-    <>
-    {/* <NewsletterForm></NewsletterForm> */}
-    </>
-    <img src="/sfondo.png" className='absolute sfocas'></img>
-    
-    {/* Componente per l'installazione PWA */}
-    <InstallPWA />
-
-    {/* Banner per la modalità offline */}
-    {showOfflineBanner && (
-      <div className="offline-banner" role="alert" aria-live="assertive">
-        <span>Sei offline. Alcune funzionalità potrebbero non essere disponibili.</span>
-      </div>
-    )}
-    
-    {/* Menu di accessibilità */}
-    <AccessibilityMenu />
-
-    {/* Video con bordi arrotondati */}
-    <div className="absolute top-0 left-0 w-full h-[30vh] z-50 overflow-hidden ">
-      <VideoPlayer
-        videoUrl="/parla.mp4"
-        isPlaying={isPlaying}
-        className="object-cover w-full h-full"
+    <div className="relative w-full h-screen max-w-xl mx-auto flex flex-col z-3 app"
+        style={{
+        paddingTop:    'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
+      {/* Modale di selezione lingua */}
+      <LanguageModal 
+        isOpen={showLanguageModal} 
+        onLanguageSelect={(lang) => {
+          handleSpeechLanguageChange(lang);
+          // La funzione handleSpeechLanguageChange già imposta languageSelected e showLanguageModal
+          // quindi non è necessario impostarli di nuovo qui
+        }} 
       />
       
-      {/* Player audio centralizzato */}
-      <CentralAudioPlayer 
-        audioRef={audioManagerRef}
-        isPlaying={isPlaying}
-        onPlayPause={togglePlayPause}
-      />
+      <>
+      {/* <NewsletterForm></NewsletterForm> */}
+      </>
+      <img src="/sfondo.png" className='absolute sfocas'></img>
       
-      {/* Pulsante per attivare/disattivare l'audio */}
-      <AudioToggle 
-        isAudioEnabled={isAudioEnabled}
-        onToggle={toggleAudioEnabled}
-      />
-    </div>
-    
-    {/* Dropdown delle lingue */}
-    <div className="absolute top-4 right-4 z-100">
-      <LanguageSelector
-        currentLanguage={currentLanguage}
-        onLanguageChange={handleSpeechLanguageChange}
-      />
-    </div>
-
-    {/* Contenuti che scorrono sotto il video */}
-    <div className="flex flex-col pt-[30vh] h-full rounded-full">
-      {/* Area dinamica */}
-      <div className="relative flex-1">
-        {/* CHAT */}
-        {activeTab === 'chat' && (
-          <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3" role="list" aria-live="polite">
-            <ChatMessages
-              messages={messages}
-              onCategoryClick={(clickedText) => {
-                  // Ora riceviamo direttamente il testo cliccato invece dell'oggetto categoria
-                  sendMessage(`Parlami di ${clickedText}`);
-                }}
-              UI_THROTTLE_MS={UI_THROTTLE_MS}
-              lastUiUpdateRef={lastUiUpdateRef}
-              loading={loading}
-            />
-            <div ref={endRef} />
-          </div>
-        )}
-
-        {/* SETTINGS */}
-        {activeTab === 'settings' && (
-          <div className="absolute inset-0 overflow-y-auto p-4">
-            <LanguageSelector
-              currentLanguage={currentLanguage}
-              onLanguageChange={handleSpeechLanguageChange}
-            />
-          </div>
-        )}
-
-        {/* LOCATION */}
-        {activeTab === 'location' && (
-          <div className="absolute inset-0">
-            <MapView key={mapKey} />
-          </div>
-        )}
-      </div>
-
-      {/* Input bar (solo in chat) */}
-      {activeTab === 'chat' && (
-        <div className="input-container">
-          <div className="flex space-x-2">
-            <input
-              type="text"
-              className="input-field"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !loading && sendMessage()}
-              placeholder="Scrivi un messaggio…"
-              disabled={loading || isOffline}
-              aria-label="Messaggio di testo"
-            />
-            <SpeechRecognition
-              currentLanguage={currentLanguage}
-              onTranscriptChange={setInput}
-              disabled={loading || isOffline}
-            />
-            <button
-              onClick={() => sendMessage()}
-              disabled={loading || !input.trim() || isOffline}
-              className={`send-button ${loading || !input.trim() || isOffline ? 'opacity-50 cursor-not-allowed' : ''}`}
-              aria-label="Invia messaggio"
-            >
-              ➤
-            </button>
-          </div>
+      {/* Componente per l'installazione PWA */}
+      <InstallPWA />
+      
+      {/* Banner per la modalità offline */}
+      {showOfflineBanner && (
+        <div className="offline-banner" role="alert" aria-live="assertive">
+          <span>Sei offline. Alcune funzionalità potrebbero non essere disponibili.</span>
         </div>
       )}
+    
+      {/* Menu di accessibilità */}
+      <AccessibilityMenu />
 
-      {/* Bottom nav arrotondata */}
-      {/* <nav className="nav-bar">
+      {/* Video con bordi arrotondati */}
+      <div className="absolute top-0 left-0 w-full h-[30vh] z-50 overflow-hidden rounded-3xl p-3">
+        <VideoPlayer
+          videoUrl="/parla.mp4"
+          isPlaying={isPlaying}
+          className="object-cover w-full h-full"
+        />
         
-        <button 
-          onClick={() => setActiveTab('location')} 
-          className={`nav-button ${activeTab === 'location' ? 'active' : ''}`}
-        >
-          <MapPinIcon
-            className={`nav-icon ${activeTab === 'location' ? 'text-[#E3742E]' : 'text-[#F5EFE0]'}`}
-          />
-        </button>
+        {/* Player audio centralizzato */}
+        <CentralAudioPlayer 
+          audioRef={audioManagerRef}
+          isPlaying={isPlaying}
+          onPlayPause={togglePlayPause}
+        />
         
-        <button 
-          onClick={() => setActiveTab('chat')} 
-          className={`nav-button ${activeTab === 'chat' ? 'active' : ''}`}
-        >
-          <CodeBracketIcon
-            className={`nav-icon ${activeTab === 'chat' ? 'text-[#E3742E]' : 'text-[#F5EFE0]'}`}
-          />
-        </button>
-      </nav> */}
+        {/* Pulsante per attivare/disattivare l'audio */}
+        <AudioToggle 
+          isAudioEnabled={isAudioEnabled}
+          onToggle={toggleAudioEnabled}
+        />
+      </div>
+      
+      {/* Dropdown delle lingue */}
+      <div className="absolute top-4 right-4 z-100">
+        <LanguageSelector
+          currentLanguage={currentLanguage}
+          onLanguageChange={handleSpeechLanguageChange}
+        />
+      </div>
+
+      {/* Contenuti che scorrono sotto il video */}
+      <div className="flex flex-col pt-[30vh] h-full rounded-full">
+        {/* Area dinamica */}
+        <div className="relative flex-1">
+          {/* CHAT */}
+          {activeTab === 'chat' && (
+            <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3" role="list" aria-live="polite">
+              <ChatMessages
+                messages={messages}
+                onCategoryClick={(clickedText) => {
+                    // Ora riceviamo direttamente il testo cliccato invece dell'oggetto categoria
+                    sendMessage(`Parlami di ${clickedText}`);
+                  }}
+                UI_THROTTLE_MS={UI_THROTTLE_MS}
+                lastUiUpdateRef={lastUiUpdateRef}
+                loading={loading}
+              />
+              <div ref={endRef} />
+            </div>
+          )}
+
+          {/* SETTINGS */}
+          {activeTab === 'settings' && (
+            <div className="absolute inset-0 overflow-y-auto p-4">
+              <LanguageSelector
+                currentLanguage={currentLanguage}
+                onLanguageChange={handleSpeechLanguageChange}
+              />
+            </div>
+          )}
+
+          {/* LOCATION */}
+          {activeTab === 'location' && (
+            <div className="absolute inset-0">
+              <MapView key={mapKey} />
+            </div>
+          )}
+        </div>
+
+        {/* Input bar (solo in chat) */}
+        {activeTab === 'chat' && (
+          <div className="input-container">
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                className="input-field"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !loading && sendMessage()}
+                placeholder="Scrivi un messaggio…"
+                disabled={loading || isOffline}
+                aria-label="Messaggio di testo"
+              />
+              <SpeechRecognition
+                currentLanguage={currentLanguage}
+                onTranscriptChange={setInput}
+                disabled={loading || isOffline}
+              />
+              <button
+                onClick={() => sendMessage()}
+                disabled={loading || !input.trim() || isOffline}
+                className={`send-button ${loading || !input.trim() || isOffline ? 'opacity-50 cursor-not-allowed' : ''}`}
+                aria-label="Invia messaggio"
+              >
+                ➤
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom nav arrotondata */}
+        {/* <nav className="nav-bar">
+          
+          <button 
+            onClick={() => setActiveTab('location')} 
+            className={`nav-button ${activeTab === 'location' ? 'active' : ''}`}
+          >
+            <MapPinIcon
+              className={`nav-icon ${activeTab === 'location' ? 'text-[#E3742E]' : 'text-[#F5EFE0]'}`}
+            />
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('chat')} 
+            className={`nav-button ${activeTab === 'chat' ? 'active' : ''}`}
+          >
+            <CodeBracketIcon
+              className={`nav-icon ${activeTab === 'chat' ? 'text-[#E3742E]' : 'text-[#F5EFE0]'}`}
+            />
+          </button>
+        </nav> */}
+      </div>
     </div>
-  </div>
 );
 
 }

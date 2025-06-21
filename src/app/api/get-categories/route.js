@@ -47,12 +47,6 @@ export async function GET(req) {
         FROM category_translations
       `);
       
-      // Log per debug - mostra tutte le traduzioni disponibili
-      console.log('Traduzioni disponibili nel database:');
-      translationsResult.rows.forEach(row => {
-        console.log(`- "${row.category_name}" => "${row.translated_name}" (${row.language_code})`);
-      });
-      
       // Crea una mappa delle traduzioni organizzata per lingua
       const translationsMap = {};
       translationsResult.rows.forEach(row => {
@@ -132,12 +126,6 @@ export async function GET(req) {
         
         // Mantieni la compatibilità con il codice esistente usando la lingua richiesta
         cat.translated_name = cat.translations[language] || cat.category;
-        
-        // Aggiungi log per debug
-        console.log(`Categoria: "${cat.category}", Traduzioni disponibili: ${Object.keys(cat.translations).join(', ')}`);
-        Object.entries(cat.translations).forEach(([lang, translation]) => {
-          console.log(`  - ${lang}: "${translation}"`);
-        });
       });
 
       // rows = [ { category: 'Sport', translated_name: 'Sports', names: ['Calcio','Tennis',...] }, ... ]

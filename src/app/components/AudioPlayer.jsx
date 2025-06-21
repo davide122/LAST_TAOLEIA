@@ -24,9 +24,15 @@ export default function AudioPlayer({ text, language = 'it' }) {
         setAudioUrl(null);
       }
       
+      // Recupera la lingua selezionata dal localStorage se disponibile
+      const selectedLanguage = typeof window !== 'undefined' ? localStorage.getItem('selectedLanguage') || language : language;
+      
       const response = await fetch('/api/elevenlabs-tts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-selected-language': selectedLanguage
+        },
         body: JSON.stringify({ text, language })
       });
       

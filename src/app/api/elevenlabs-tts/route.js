@@ -4,27 +4,27 @@ export const runtime = 'nodejs';
 export async function POST(req) {
   try {
     const { text, language = 'it' } = await req.json();
+    
+    // Recupera la lingua dal header x-selected-language se presente
+    let selectedLanguage = language;
+    try {
+      const headers = req.headers;
+      if (headers.has('x-selected-language')) {
+        selectedLanguage = headers.get('x-selected-language');
+      }
+    } catch (err) {
+      console.error('Errore nel recupero della lingua dall\'header:', err);
+    }
     const key = process.env.ELEVENLABS_API_KEY;
     
     // Seleziona la voce in base alla lingua
     let voiceId;
-    switch (language) {
-      case 'en':
-        voiceId = process.env.ELEVENLABS_VOICE_ID_EN || process.env.ELEVENLABS_VOICE_ID;
-        break;
-      case 'fr':
-        voiceId = process.env.ELEVENLABS_VOICE_ID_FR || process.env.ELEVENLABS_VOICE_ID;
-        break;
-      case 'es':
-        voiceId = process.env.ELEVENLABS_VOICE_ID_ES || process.env.ELEVENLABS_VOICE_ID;
-        break;
-      case 'de':
-        voiceId = process.env.ELEVENLABS_VOICE_ID_DE || process.env.ELEVENLABS_VOICE_ID;
-        break;
-      case 'it':
-      default:
-        voiceId = process.env.ELEVENLABS_VOICE_ID;
-        break;
+    if (selectedLanguage === 'it') {
+      // Usa la voce specifica per l'italiano
+      voiceId = process.env.ELEVENLABS_VOICE_ID_IT || process.env.ELEVENLABS_VOICE_ID;
+    } else {
+      // Usa la voce comune per tutte le altre lingue
+      voiceId = process.env.ELEVENLABS_VOICE_ID_OTHER || process.env.ELEVENLABS_VOICE_ID;
     }
     
     if (!key || !voiceId) throw new Error('Mancano ELEVENLABS_API_KEY o ELEVENLABS_VOICE_ID');

@@ -188,7 +188,7 @@ export default function ActivityCard({
             <AudioPlayer text={audio_guide_text} language={currentLang} aria-labelledby="audio-guide-label" />
           </div>
         )}
-        <p className="text-gray-700 mb-4">{audio_guide_text.slice(0,100)+"... "+translations.listenMore[currentLang]}</p>
+        <p className="text-gray-700 mb-4">{audio_guide_text?.slice(0,100)+"... "+translations.listenMore[currentLang]}</p>
 
         <div className="text-gray-800 mb-4 space-y-1 text-sm" role="list" aria-label="Informazioni di contatto">
           <div role="listitem"><span className="font-medium">{translations.address[currentLang]}:</span> {address}</div>
