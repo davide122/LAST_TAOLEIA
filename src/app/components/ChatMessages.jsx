@@ -18,7 +18,7 @@ export default function ChatMessages({
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Determina se mostrare i pallini di caricamento
+  // Determina se mostrare i pallini di caricamento globali
   const showLoadingDots = loading && messages.length > 0 && messages[messages.length - 1].role !== 'assistant';
 
   // Ottieni la lingua preferita dal localStorage
@@ -33,9 +33,9 @@ export default function ChatMessages({
   const renderToolContent = (data) => {
     const currentLang = getPreferredLanguage();
     if (data.type === 'menu') {
-      return <MenuCard {...data} language_code={currentLang} />;
+      return <MenuCard {...data} language_code={currentLang} onCategoryClick={onCategoryClick} />;
     }
-    return <ActivityCard {...data} language_code={currentLang} />;
+    return <ActivityCard {...data} language_code={currentLang} onCategoryClick={onCategoryClick} />;
   };
 
   // Filtra i messaggi per nascondere il primo messaggio dell'utente (istruzioni)
@@ -62,12 +62,16 @@ export default function ChatMessages({
                 : 'message-assistant break-words'
             }>
               {m.role === 'assistant' ? (
-                <ClickableCategory 
-                  key={`message-${i}-${Date.now()}`} 
-                  onCategoryClick={onCategoryClick}
-                >
-                  {m.content}
-                </ClickableCategory>
+                m.isLoading ? (
+                  <LoadingIndicator type="dots" size="medium" />
+                ) : (
+                  <ClickableCategory 
+                    key={`message-${i}-${Date.now()}`} 
+                    onCategoryClick={onCategoryClick}
+                  >
+                    {m.content}
+                  </ClickableCategory>
+                )
               ) : m.content}
             </div>
           )}

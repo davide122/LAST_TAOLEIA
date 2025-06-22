@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 
 export default function ClickableCategory({ children, onCategoryClick }) {
   const [items, setItems]     = useState([]); // [{ category, translated_name, names: [...] }, …]
+  const [activities, setActivities] = useState([]); // Attività recuperate da get-activities
   const [loading, setLoading] = useState(true);
   const [currentLanguage, setCurrentLanguage] = useState('it'); // Lingua corrente
 
@@ -54,8 +55,38 @@ export default function ClickableCategory({ children, onCategoryClick }) {
         setLoading(false);
       }
     };
+    
+    // Funzione per recuperare le attività
+    const fetchActivities = async () => {
+      try {
+        const res = await fetch('/api/get-activities');
+        if (!res.ok) throw new Error(`Errore HTTP: ${res.status}`);
+        const data = await res.json();
+        
+        if (data && data.activities && Array.isArray(data.activities)) {
+          setActivities(data.activities);
+          localStorage.setItem('activitiesCache', JSON.stringify(data));
+          localStorage.setItem('activitiesCacheTimestamp', Date.now().toString());
+        } else {
+          setActivities([]);
+        }
+      } catch (error) {
+        // Prova a usare i dati dalla cache se disponibili
+        const cache = localStorage.getItem('activitiesCache');
+        if (cache) {
+          try {
+            const data = JSON.parse(cache);
+            if (data && data.activities) {
+              setActivities(data.activities);
+            }
+          } catch (e) {
+            // Errore silenzioso
+          }
+        }
+      }
+    };
 
-    // Controlla se è necessario aggiornare la cache
+    // Controlla se è necessario aggiornare la cache delle categorie
     const timestamp = localStorage.getItem('categoriesCacheTimestamp');
     const now = Date.now();
     const cacheAge = timestamp ? now - parseInt(timestamp) : Infinity;
@@ -82,6 +113,32 @@ export default function ClickableCategory({ children, onCategoryClick }) {
         fetchCategories();
       }
     }
+    
+    // Controlla se è necessario aggiornare la cache delle attività
+    const activitiesTimestamp = localStorage.getItem('activitiesCacheTimestamp');
+    const activitiesCacheAge = activitiesTimestamp ? now - parseInt(activitiesTimestamp) : Infinity;
+    const activitiesCacheExpired = activitiesCacheAge > 3600000; // 1 ora
+    
+    if (activitiesCacheExpired) {
+      fetchActivities();
+    } else {
+      // Usa la cache se disponibile e non scaduta
+      const activitiesCache = localStorage.getItem('activitiesCache');
+      if (activitiesCache) {
+        try {
+          const data = JSON.parse(activitiesCache);
+          if (data && data.activities) {
+            setActivities(data.activities);
+          } else {
+            fetchActivities();
+          }
+        } catch (e) {
+          fetchActivities();
+        }
+      } else {
+        fetchActivities();
+      }
+    }
   }, []);
 
   // Funzione per normalizzare il testo (rimuove accenti, converte in minuscolo)
@@ -92,6 +149,29 @@ export default function ClickableCategory({ children, onCategoryClick }) {
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  };
+  
+  // Lista di stopwords (parole comuni da ignorare)
+  const stopwords = new Set([
+    // Italiano
+    'il', 'lo', 'la', 'i', 'gli', 'le', 'un', 'uno', 'una', 'di', 'a', 'da', 'in', 'con', 'su', 'per', 'tra', 'fra',
+    'questo', 'questa', 'questi', 'queste', 'quello', 'quella', 'quelli', 'quelle', 'che', 'chi', 'cui', 'come',
+    'dove', 'quando', 'perché', 'quale', 'quali', 'quanto', 'quanta', 'quanti', 'quante', 'è', 'sono', 'sei',
+    'siamo', 'siete', 'ed', 'e', 'ma', 'se', 'o', 'oppure', 'nel', 'nella', 'nei', 'nelle', 'del', 'della', 'dei',
+    'delle', 'al', 'allo', 'alla', 'ai', 'agli', 'alle', 'dal', 'dallo', 'dalla', 'dai', 'dagli', 'dalle',
+    // Inglese
+    'the', 'a', 'an', 'and', 'or', 'but', 'if', 'because', 'as', 'what', 'which', 'this', 'that', 'these', 'those',
+    'then', 'just', 'so', 'than', 'such', 'both', 'through', 'about', 'for', 'is', 'are', 'was', 'were', 'be',
+    'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'at', 'by', 'with', 'from',
+    'to', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when',
+    'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no',
+    'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now',
+    'offers', 'located', 'serves', 'these', 'places'
+  ]);
+  
+  // Funzione per verificare se una parola è una stopword
+  const isStopword = word => {
+    return stopwords.has(normalizeText(word));
   };
 
   const { termToCategory, sortedTerms } = useMemo(() => {
@@ -111,9 +191,32 @@ export default function ClickableCategory({ children, onCategoryClick }) {
       
       parts.forEach(part => {
         const normalizedTerm = normalizeText(part);
-        if (normalizedTerm) {
+        
+        // Verifica se il termine è una singola parola e se è una stopword
+        const isSingleWord = !part.includes(' ');
+        const isCommonWord = isSingleWord && isStopword(part);
+        
+        // Aggiungi solo se non è una stopword o se è un termine composto (più parole)
+        if (normalizedTerm && (!isCommonWord || !isSingleWord)) {
           termMap[normalizedTerm] = category;
           terms.add(part);
+          
+          // Se è un'attività o un nome completo (contiene spazi), aggiungi anche le singole parole significative
+          if (category.isActivity || part.includes(' ')) {
+            // Aggiungi il nome completo come termine prioritario
+            const words = part.split(/\s+/);
+            if (words.length > 1) {
+              // Aggiungi anche le singole parole significative (più di 3 caratteri) che non sono stopwords
+              words.forEach(word => {
+                if (word.length >= MIN_TERM_LENGTH && !isStopword(word)) {
+                  const normalizedWord = normalizeText(word);
+                  // Associa la parola alla stessa categoria del nome completo
+                  termMap[normalizedWord] = category;
+                  terms.add(word);
+                }
+              });
+            }
+          }
         }
       });
     };
@@ -149,6 +252,38 @@ export default function ClickableCategory({ children, onCategoryClick }) {
       }
     });
     
+    // Processa tutte le attività
+    activities.forEach(activity => {
+      if (activity.name) {
+        // Crea un oggetto speciale per le attività
+        const activityItem = {
+          isActivity: true,
+          id: activity.id,
+          category: activity.category || 'activity',
+          translated_name: activity.name,
+          description: activity.description,
+          address: activity.address,
+          position: activity.position
+        };
+        
+        // Aggiungi il nome dell'attività come termine da evidenziare
+        mapCommaTerms(activity.name, activityItem);
+        
+        // Se il nome contiene "Ristorante" o altre parole chiave, aggiungi anche varianti
+        if (activity.name.includes('Ristorante') || activity.name.includes('Restaurant')) {
+          // Estrai il nome senza la parola "Ristorante" o "Restaurant"
+          let nameWithoutPrefix = activity.name
+            .replace(/^Ristorante\s+/i, '')
+            .replace(/^Restaurant\s+/i, '')
+            .trim();
+          
+          if (nameWithoutPrefix && nameWithoutPrefix.length >= 3) {
+            mapCommaTerms(nameWithoutPrefix, activityItem);
+          }
+        }
+      }
+    });
+    
     // Ordina i termini per lunghezza decrescente per dare priorità ai termini più lunghi
     const sortedTermsList = Array.from(terms).sort((a, b) => b.length - a.length);
     
@@ -157,7 +292,7 @@ export default function ClickableCategory({ children, onCategoryClick }) {
     const limitedTerms = sortedTermsList.slice(0, MAX_TERMS);
     
     return { termToCategory: termMap, sortedTerms: limitedTerms };
-  }, [items]);
+  }, [items, activities]);
 
   // Funzione per trovare i termini nel testo
   const findTerms = (text) => {
@@ -169,6 +304,24 @@ export default function ClickableCategory({ children, onCategoryClick }) {
     // Normalizza il testo una sola volta
     const lower = normalizeText(text);
     
+    // Funzione per verificare se due parole sono simili (singolare/plurale)
+    const areSimilarWords = (word1, word2) => {
+      // Se le parole sono identiche, sono ovviamente simili
+      if (word1 === word2) return true;
+      
+      // Se una parola è molto più corta dell'altra, probabilmente non sono variazioni
+      if (Math.abs(word1.length - word2.length) > 3) return false;
+      
+      // Confronta le radici delle parole (ignora le ultime 1-3 lettere)
+      const minLength = Math.min(word1.length, word2.length);
+      const rootLength = Math.max(minLength - 3, 3); // Almeno 3 caratteri per la radice
+      
+      const root1 = word1.substring(0, rootLength);
+      const root2 = word2.substring(0, rootLength);
+      
+      return root1 === root2;
+    };
+    
     // Cerca tutti i termini nel testo
     for (const term of sortedTerms) {
       const norm = normalizeText(term);
@@ -176,46 +329,27 @@ export default function ClickableCategory({ children, onCategoryClick }) {
       // Salta termini troppo corti
       if (norm.length < 3) continue;
       
-      // Funzione per verificare se due parole sono simili (singolare/plurale)
-      const areSimilarWords = (word1, word2) => {
-        // Se le parole sono identiche, sono ovviamente simili
-        if (word1 === word2) return true;
-        
-        // Se una parola è molto più corta dell'altra, probabilmente non sono variazioni
-        if (Math.abs(word1.length - word2.length) > 3) return false;
-        
-        // Confronta le radici delle parole (ignora le ultime 1-3 lettere)
-        const minLength = Math.min(word1.length, word2.length);
-        const rootLength = Math.max(minLength - 3, 3); // Almeno 3 caratteri per la radice
-        
-        const root1 = word1.substring(0, rootLength);
-        const root2 = word2.substring(0, rootLength);
-        
-        return root1 === root2;
-      };
+      // Salta le stopwords (parole comuni) a meno che non facciano parte di un termine composto
+      if (!term.includes(' ') && isStopword(term)) continue;
       
-      // Cerca tutte le occorrenze del termine normalizzato o parole simili
-      let idx = 0;
-      const words = lower.split(/[\s,.]+/);
+      // Verifica se il termine è un'attività o un ristorante (in genere nomi più lunghi)
+      const isFullNameTerm = term.includes(' ') && term.length > 10;
       
-      for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-        if (word.length < 3) continue;
+      if (isFullNameTerm) {
+        // Per nomi completi (es. "Ristorante Le Naumachie"), cerca la corrispondenza esatta
+        let startIdx = 0;
+        let foundIdx = -1;
         
-        // Verifica se la parola corrente è simile al termine cercato
-        if (areSimilarWords(word, norm)) {
-          // Trova la posizione della parola nel testo originale
-          const wordStart = lower.indexOf(word, idx);
-          if (wordStart === -1) continue;
-          
-          const wordEnd = wordStart + word.length;
-          idx = wordEnd;
+        // Cerca tutte le occorrenze del termine completo
+        while ((foundIdx = lower.indexOf(norm, startIdx)) !== -1) {
+          const matchEnd = foundIdx + norm.length;
+          startIdx = matchEnd;
           
           // Verifica se questa parte di testo è già stata evidenziata
           const isOverlapping = markedRanges.some(
-            range => (wordStart >= range.start && wordStart < range.end) || 
-                    (wordEnd > range.start && wordEnd <= range.end) ||
-                    (wordStart <= range.start && wordEnd >= range.end)
+            range => (foundIdx >= range.start && foundIdx < range.end) || 
+                    (matchEnd > range.start && matchEnd <= range.end) ||
+                    (foundIdx <= range.start && matchEnd >= range.end)
           );
           
           // Aggiungi il match solo se non si sovrappone
@@ -224,9 +358,49 @@ export default function ClickableCategory({ children, onCategoryClick }) {
             const category = termToCategory[norm];
             
             // Usa il testo originale per l'evidenziazione
-            const originalText = text.substring(wordStart, wordEnd);
-            matches.push({ term: originalText, start: wordStart, end: wordEnd, category });
-            markedRanges.push({ start: wordStart, end: wordEnd });
+            const originalText = text.substring(foundIdx, matchEnd);
+            matches.push({ term: originalText, start: foundIdx, end: matchEnd, category });
+            markedRanges.push({ start: foundIdx, end: matchEnd });
+          }
+        }
+      } else {
+        // Per termini singoli, usa l'approccio parola per parola
+        let idx = 0;
+        const words = lower.split(/[\s,.]+/);
+        
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i];
+          if (word.length < 3) continue;
+          
+          // Salta le stopwords (parole comuni)
+          if (isStopword(word)) continue;
+          
+          // Verifica se la parola corrente è simile al termine cercato
+          if (areSimilarWords(word, norm)) {
+            // Trova la posizione della parola nel testo originale
+            const wordStart = lower.indexOf(word, idx);
+            if (wordStart === -1) continue;
+            
+            const wordEnd = wordStart + word.length;
+            idx = wordEnd;
+            
+            // Verifica se questa parte di testo è già stata evidenziata
+            const isOverlapping = markedRanges.some(
+              range => (wordStart >= range.start && wordStart < range.end) || 
+                      (wordEnd > range.start && wordEnd <= range.end) ||
+                      (wordStart <= range.start && wordEnd >= range.end)
+            );
+            
+            // Aggiungi il match solo se non si sovrappone
+            if (!isOverlapping) {
+              // Trova la categoria associata a questo termine
+              const category = termToCategory[norm];
+              
+              // Usa il testo originale per l'evidenziazione
+              const originalText = text.substring(wordStart, wordEnd);
+              matches.push({ term: originalText, start: wordStart, end: wordEnd, category });
+              markedRanges.push({ start: wordStart, end: wordEnd });
+            }
           }
         }
       }

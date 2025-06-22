@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import ClickableCategory from './ClickableCategory';
 
-export default function MenuCard({ category, recommendations, timestamp, type, language_code }) {
+export default function MenuCard({ category, recommendations, timestamp, type, language_code, onCategoryClick }) {
   const [expanded, setExpanded] = useState(true);
 
   // Se non ci sono dati validi, non mostrare nulla
@@ -81,7 +82,15 @@ export default function MenuCard({ category, recommendations, timestamp, type, l
             role="list"
           >
             {recommendations.map((recommendation, index) => (
-              <li key={index} className="text-gray-700" role="listitem">{recommendation}</li>
+              <li key={index} className="text-gray-700" role="listitem">
+                {onCategoryClick ? (
+                  <ClickableCategory onCategoryClick={onCategoryClick}>
+                    {recommendation}
+                  </ClickableCategory>
+                ) : (
+                  recommendation
+                )}
+              </li>
             ))}
           </ul>
         </div>

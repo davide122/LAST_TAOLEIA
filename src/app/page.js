@@ -42,8 +42,20 @@ export default function TaoleiaChat() {
   const [isOffline, setIsOffline] = useState(false);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
   const [serviceWorkerRegistered, setServiceWorkerRegistered] = useState(false);
-  const [languageSelected, setLanguageSelected] = useState(false); // Nuovo stato per tracciare se l'utente ha selezionato una lingua
-  const [showLanguageModal, setShowLanguageModal] = useState(true); // Mostra il modale di selezione lingua all'avvio
+  // Verifica se l'utente ha già selezionato una lingua in precedenza
+  const [languageSelected, setLanguageSelected] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('selectedLanguage') !== null;
+    }
+    return false;
+  }); 
+  // Mostra il modale solo se non c'è una lingua selezionata
+  const [showLanguageModal, setShowLanguageModal] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('selectedLanguage') === null;
+    }
+    return true;
+  });
 
   const [isListeningChat, setIsListeningChat] = useState(false);
   const chatRecRef = useRef(null);
@@ -171,11 +183,6 @@ export default function TaoleiaChat() {
           // Aggiungi il messaggio di benvenuto all'UI come messaggio utente
           setMessages(m => [...m, { role: 'user', content: welcomeMessage }]);
           
-          // Aggiungi immediatamente un messaggio vuoto dell'assistente con indicatore di caricamento
-          // Questo verrà mostrato mentre aspettiamo la risposta
-          setLoading(true);
-          setMessages(m => [...m, { role: 'assistant', content: '' }]);
-          
           // Log del messaggio dell'utente
           if (conversationId) {
             await logMessage('user', welcomeMessage, {
@@ -196,6 +203,9 @@ export default function TaoleiaChat() {
           
           const newTid = res.headers.get('X-Thread-Id');
           if (newTid) setThreadId(newTid);
+          
+          // Aggiungi il placeholder del messaggio dell'assistente con l'indicatore di caricamento
+          setMessages(m => [...m, { role: 'assistant', content: '', isLoading: true }]);
 
           // Processa la risposta dell'assistente
           const reader = res.body.getReader();
@@ -230,6 +240,7 @@ export default function TaoleiaChat() {
                   setMessages(m => {
                     const c = [...m];
                     c[c.length-1].content = full;
+                    c[c.length-1].isLoading = false; // Rimuovi l'indicatore di caricamento
                     return c;
                   });
                   lastUiUpdateRef.current = now;
@@ -242,11 +253,9 @@ export default function TaoleiaChat() {
           setMessages(m => {
             const c = [...m];
             c[c.length-1].content = full;
+            c[c.length-1].isLoading = false; // Assicurati che l'indicatore di caricamento sia rimosso
             return c;
           });
-          
-          // Disattiva l'indicatore di caricamento
-          setLoading(false);
 
           // Log della risposta dell'assistente
           if (conversationId) {
@@ -599,8 +608,9 @@ export default function TaoleiaChat() {
       const dec = new TextDecoder();
       let buf = '', full = '';
 
-      // Aggiungi il placeholder del messaggio dell'assistente
-      setMessages(m => [...m, { role: 'assistant', content: '' }]);
+      // Aggiungi il placeholder del messaggio dell'assistente immediatamente
+      // Questo verrà mostrato con l'indicatore di caricamento
+      setMessages(m => [...m, { role: 'assistant', content: '', isLoading: true }]);
 
       while (true) {
         const { done, value } = await reader.read();
@@ -630,6 +640,7 @@ export default function TaoleiaChat() {
               setMessages(m => {
                 const c = [...m];
                 c[c.length - 1].content = full;
+                c[c.length - 1].isLoading = false; // Rimuovi l'indicatore di caricamento quando iniziamo a ricevere contenuto
                 return c;
               });
               lastUiUpdateRef.current = now;
@@ -642,6 +653,7 @@ export default function TaoleiaChat() {
       setMessages(m => {
         const c = [...m];
         c[c.length - 1].content = full;
+        c[c.length - 1].isLoading = false; // Assicurati che l'indicatore di caricamento sia rimosso
         return c;
       });
 
@@ -772,8 +784,29 @@ export default function TaoleiaChat() {
               <ChatMessages
                 messages={messages}
                 onCategoryClick={(clickedText) => {
-                    // Ora riceviamo direttamente il testo cliccato invece dell'oggetto categoria
-                    sendMessage(`Parlami di ${clickedText}`);
+                    // Traduzioni per "Parlami di" in base alla lingua selezionata
+                    const talkAboutTranslations = {
+                      it: "Parlami di",
+                      en: "Tell me about",
+                      fr: "Parle-moi de",
+                      es: "Háblame de",
+                      de: "Erzähl mir von",
+                      pt: "Fale-me sobre",
+                      ru: "Расскажи мне о",
+                      zh: "告诉我关于",
+                      ja: "について教えて",
+                      ar: "حدثني عن"
+                    };
+                    
+                    // Usa la traduzione corretta o l'italiano come fallback
+                    const talkAbout = talkAboutTranslations[currentLanguage] || talkAboutTranslations.it;
+                    
+                    // Gestione speciale per il giapponese che ha una struttura grammaticale diversa
+                    if (currentLanguage === 'ja') {
+                      sendMessage(`${clickedText}${talkAbout}`);
+                    } else {
+                      sendMessage(`${talkAbout} ${clickedText}`);
+                    }
                   }}
                 UI_THROTTLE_MS={UI_THROTTLE_MS}
                 lastUiUpdateRef={lastUiUpdateRef}

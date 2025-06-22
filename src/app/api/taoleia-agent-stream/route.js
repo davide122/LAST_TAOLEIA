@@ -88,7 +88,26 @@ export async function POST(req) {
           if (!initRes.ok) throw new Error(await initRes.text());
           tid = (await initRes.json()).id;
         } else {
-          // Thread esistente, aggiungi il messaggio
+          // Thread esistente, prima aggiungi un messaggio di sistema per la lingua
+          const sysRes = await fetch(
+            `https://api.openai.com/v1/threads/${tid}/messages`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type':  'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'OpenAI-Beta':   'assistants=v2'
+              },
+              body: JSON.stringify({ 
+                role: 'user', 
+                content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages.` 
+              })
+            }
+          );
+          
+          if (!sysRes.ok) throw new Error(await sysRes.text());
+          
+          // Poi aggiungi il messaggio dell'utente
           const msgRes = await fetch(
             `https://api.openai.com/v1/threads/${tid}/messages`,
             {
@@ -100,7 +119,7 @@ export async function POST(req) {
               },
               body: JSON.stringify({ 
                 role: 'user', 
-                content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. Here is my message:\n\n${message}` 
+                content: message 
               })
             }
           );

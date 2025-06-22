@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import AudioPlayer from './AudioPlayer';
+import ClickableCategory from './ClickableCategory';
 
 export default function ActivityCard({
   name,
@@ -15,7 +16,8 @@ export default function ActivityCard({
   prices,
   audio_guide_text,
   language_code = 'it',
-  images = []   // array di {url, alt, main}
+  images = [],   // array di {url, alt, main}
+  onCategoryClick
 }) {
   const [current, setCurrent] = useState(0);
   const total = images.length;
@@ -163,7 +165,15 @@ export default function ActivityCard({
 
       <div className="p-4 flex-1 overflow-y-auto">
         <h2 className="text-xl font-bold mb-2 text-gray-900">{name}</h2>
-        <p className="text-gray-700 mb-4">{description}</p>
+        <p className="text-gray-700 mb-4">
+          {onCategoryClick ? (
+            <ClickableCategory onCategoryClick={onCategoryClick}>
+              {description}
+            </ClickableCategory>
+          ) : (
+            description
+          )}
+        </p>
 
         {/* Menu */}
         {menu && (
