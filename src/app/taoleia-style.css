@@ -62,27 +62,27 @@
 /* Input bar */
 .input-container {
   background-color: rgba(10, 59, 59, 0.7);
-  border-radius: 1.5rem 1.5rem 0 0;
+  border-radius: 1.2rem 1.2rem 0 0;
   backdrop-filter: blur(10px);
-  padding: 1rem;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+  padding: 0.7rem;
+  box-shadow: 0 -3px 8px rgba(0, 0, 0, 0.1);
 }
 
 .input-field {
   background-color: rgba(245, 239, 224, 0.9);
   border: 1px solid rgba(10, 59, 59, 0.3);
-  border-radius: 2rem;
-  padding: 0.8rem 1.2rem;
+  border-radius: 1.5rem;
+  padding: 0.6rem 1rem;
   color: #333;
   width: 100%;
-  font-size: 1rem;
+  font-size: 0.9rem;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.1);
 }
 
 .input-field:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(10, 59, 59, 0.8);
+  box-shadow: 0 0 0 1px rgba(10, 59, 59, 0.8);
   background-color: #F5EFE0;
 }
 
@@ -91,20 +91,20 @@
   color: #F5EFE0;
   border: 1px solid rgba(245, 239, 224, 0.3);
   border-radius: 50%;
-  width: 3rem;
-  height: 3rem;
+  width: 2.5rem;
+  height: 2.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
 }
 
 .send-button:hover {
   background-color: rgba(10, 59, 59, 1);
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transform: scale(1.03);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
 /* Dropdown delle lingue */
@@ -231,7 +231,7 @@
   100% { width: 100%; }
 }
 
-.fade-in {
+.fade-in, .animate-fade-in {
   animation: fadeIn 0.3s ease forwards;
 }
 

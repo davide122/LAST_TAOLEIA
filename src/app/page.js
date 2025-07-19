@@ -12,7 +12,7 @@ import { welcomeMessages } from './config/welcomeMessages';
 import '../chat.css';
 import './taoleia-style.css';
 import './central-audio-player.css';
-import './audio-toggle.css';
+// audio-toggle.css è stato rimosso poiché il pulsante è integrato nel VideoPlayer
 import './components/InstallPWA.css';
 import MapView from './components/MapView';
 import NewsletterForm from './components/newsletter/NewsletterForm';
@@ -23,12 +23,16 @@ import LanguageSelector from './components/languageselector.jsx';
 import { useConversationLogger } from '../hooks/useConversationLogger';
 import { useAudioManager } from './hooks/useAudioManager';
 import CentralAudioPlayer from './components/CentralAudioPlayer';
-import AudioToggle from './components/AudioToggle';
+// AudioToggle è stato integrato direttamente nel VideoPlayer
 import AccessibilityMenu from './components/AccessibilityMenu';
 import LoadingIndicator from './components/LoadingIndicator';
 import InstallPWA from './components/InstallPWA';
 import { useOfflineData } from '../hooks/useOfflineData';
 import LanguageModal from './components/LanguageModal';
+// Nuovi componenti per migliorare l'UX
+import CategoryMenu from './components/CategoryMenu';
+import WelcomeGuide from './components/WelcomeGuide';
+import FeatureIntroduction from './components/FeatureIntroduction';
 
 export default function TaoleiaChat() {
   // --- STATE & REF ---
@@ -42,6 +46,8 @@ export default function TaoleiaChat() {
   const [isOffline, setIsOffline] = useState(false);
   const [showOfflineBanner, setShowOfflineBanner] = useState(false);
   const [serviceWorkerRegistered, setServiceWorkerRegistered] = useState(false);
+  // Stati per i nuovi componenti UX
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   // Verifica se l'utente ha già selezionato una lingua in precedenza
   const [languageSelected, setLanguageSelected] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -544,6 +550,14 @@ export default function TaoleiaChat() {
   };
 
   // Modifica la funzione sendMessage per utilizzare il nuovo sistema audio
+  // Funzione per gestire i suggerimenti di chat (mantenuta per compatibilità)
+  const handleSuggestionClick = (suggestion) => {
+    // Invia direttamente il messaggio invece di metterlo nell'input
+    sendMessage(suggestion);
+  };
+  
+
+  
   const sendMessage = async (text = input) => {
     if (!text.trim()) return;
     
@@ -740,31 +754,87 @@ export default function TaoleiaChat() {
           <span>Sei offline. Alcune funzionalità potrebbero non essere disponibili.</span>
         </div>
       )}
+      
+      {/* Guida di benvenuto per i nuovi utenti */}
+      <WelcomeGuide 
+        currentLanguage={currentLanguage}
+        languageSelected={languageSelected}
+        onClose={() => {}}
+      />
     
       {/* Menu di accessibilità */}
       <AccessibilityMenu />
-
-      {/* Video con bordi arrotondati */}
-      <div className="absolute top-0 left-0 w-full h-[30vh] z-50 overflow-hidden rounded-3xl p-3">
-        <VideoPlayer
-          videoUrl="/parla.mp4"
-          isPlaying={isPlaying}
-          className="object-cover w-full h-full"
-        />
-        
-        {/* Player audio centralizzato */}
-        <CentralAudioPlayer 
-          audioRef={audioManagerRef}
-          isPlaying={isPlaying}
-          onPlayPause={togglePlayPause}
-        />
-        
-        {/* Pulsante per attivare/disattivare l'audio */}
-        <AudioToggle 
-          isAudioEnabled={isAudioEnabled}
-          onToggle={toggleAudioEnabled}
-        />
+      
+      {/* Pulsante per aprire il menu delle categorie */}
+      <div 
+        style={{ position: 'fixed', bottom: '80px', right: '16px', zIndex: 60 }}
+      >
+        <button
+          onClick={() => setShowCategoryMenu(true)}
+          className="bg-white hover:bg-gray-100 text-[#0a3b3b] rounded-full p-3.5 shadow-xl focus:outline-none focus:ring-2 focus:ring-[#E3742E] border-2 border-[#E3742E] transition-all duration-200 hover:scale-110"
+          aria-label={
+            currentLanguage === 'en' ? 'Open Category Menu' :
+            currentLanguage === 'fr' ? 'Ouvrir le menu des catégories' :
+            currentLanguage === 'es' ? 'Abrir menú de categorías' :
+            currentLanguage === 'de' ? 'Kategoriemenü öffnen' :
+            'Apri menu categorie'
+          }
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="#E3742E"
+            className="w-6 h-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 4.5v15m7.5-7.5h-15"
+            />
+          </svg>
+        </button>
       </div>
+      
+      {/* Menu delle categorie */}
+      <CategoryMenu
+             isVisible={showCategoryMenu}
+             onClose={() => setShowCategoryMenu(false)}
+             onCategorySelect={(suggestion) => {
+               // Invia direttamente il messaggio invece di metterlo nell'input
+               sendMessage(suggestion);
+               setShowCategoryMenu(false); // Chiudi il menu dopo aver selezionato un suggerimento
+             }}
+             currentLanguage={currentLanguage}
+           />
+      
+      {/* Introduzione alle funzionalità */}
+      <FeatureIntroduction 
+        currentLanguage={currentLanguage} 
+      />
+      
+
+
+      {/* Video con bordi arrotondati - dimensioni ridotte - nascosto quando il menu categorie è aperto */}
+      {!showCategoryMenu && (
+        <div className="absolute top-0 left-0 w-full h-[25vh] z-50 overflow-hidden rounded-3xl p-3">
+          <VideoPlayer
+            videoUrl="/parla.mp4"
+            isPlaying={isPlaying && !showCategoryMenu}
+            className="object-cover w-full h-full"
+            isMuted={!isAudioEnabled}
+            onMuteToggle={toggleAudioEnabled}
+          />
+          
+          {/* Player audio centralizzato */}
+          <CentralAudioPlayer 
+            audioRef={audioManagerRef}
+            isPlaying={isPlaying && !showCategoryMenu}
+            onPlayPause={togglePlayPause}
+          />
+        </div>
+      )}
       
       {/* Dropdown delle lingue */}
       <div className="absolute top-4 right-4 z-100">
@@ -775,7 +845,7 @@ export default function TaoleiaChat() {
       </div>
 
       {/* Contenuti che scorrono sotto il video */}
-      <div className="flex flex-col pt-[30vh] h-full rounded-full">
+      <div className="flex flex-col pt-[25vh] h-full rounded-full">
         {/* Area dinamica */}
         <div className="relative flex-1">
           {/* CHAT */}
@@ -862,6 +932,8 @@ export default function TaoleiaChat() {
                 ➤
               </button>
             </div>
+            
+            {/* I suggerimenti di chat sono stati rimossi come richiesto */}
           </div>
         )}
 

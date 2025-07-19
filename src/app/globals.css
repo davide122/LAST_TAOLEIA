@@ -53,3 +53,35 @@ body {
   background-color: rgba(255, 255, 255, 0.383);
   color: #0e3740;
 }
+
+/* Animazioni per i componenti UI */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.3s ease-out forwards;
+}
+
+.chat-tutorial{
+  position: fixed !important;
+  z-index: 99999 !important; /* Aumentato il z-index per assicurarsi che sia sopra tutti gli altri elementi */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.chat-tutorial.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

@@ -67,7 +67,9 @@ export default function VideoPlayer({
   videoUrl, 
   isPlaying,
   onPlaybackChange, 
-  className 
+  className,
+  isMuted = true,
+  onMuteToggle
 }) {
   const videoRef = useRef(null);
   const [error, setError] = useState(null);
@@ -177,9 +179,9 @@ export default function VideoPlayer({
   }, []);
 
   return (
-    <div className="relative w-full h-full ">
+    <div className="relative w-full h-full">
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 ">
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <p className="text-white">{error}</p>
         </div>
       )}
@@ -189,11 +191,32 @@ export default function VideoPlayer({
         src={videoUrl}
         className={className}
         playsInline
-        muted
+        muted={isMuted}
         loop={isLooping}
         preload="auto"
-       
       />
+      
+      {/* Pulsante muto integrato nel player */}
+      {onMuteToggle && (
+        <button 
+          onClick={onMuteToggle}
+          className="absolute bottom-3 right-3 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 backdrop-blur-sm transition-all duration-200 shadow-lg z-50"
+          style={{ zIndex: 100 }}
+          aria-label={isMuted ? 'Attiva audio' : 'Disattiva audio'}
+          title={isMuted ? 'Attiva audio' : 'Disattiva audio'}
+        >
+          {isMuted ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clipRule="evenodd" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+          )}
+        </button>
+      )}
     </div>
   );
 }

@@ -21,9 +21,10 @@ export default function LanguageSelector({ currentLanguage, onLanguageChange }) 
           backgroundColor: 'rgba(10, 59, 59, 0.8)',
           color: '#F5EFE0',
           border: '1px solid rgba(245, 239, 224, 0.3)',
-          borderRadius: '1rem',
-          padding: '0.5rem',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+          borderRadius: '0.75rem',
+          padding: '0.3rem',
+          fontSize: '0.8rem',
+          boxShadow: '0 1px 6px rgba(0, 0, 0, 0.15)',
           transition: 'all 0.2s ease'
         }}
       >

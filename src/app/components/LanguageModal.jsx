@@ -44,7 +44,7 @@ export default function LanguageModal({ isOpen, onLanguageSelect }) {
           display: flex;
           justify-content: center;
           align-items: center;
-          z-index: 1000;
+          z-index: 9000; /* Modificato per essere inferiore al z-index del tutorial (99999) */
         }
         
         .language-modal {
