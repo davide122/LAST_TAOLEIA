@@ -4,6 +4,10 @@ export const runtime = 'nodejs';
 export async function POST(req) {
   try {
     const { text, language = 'it' } = await req.json();
+    
+    // Debug logging
+    console.log('TTS Request:', { text: text.substring(0, 100) + '...', language });
+    
     const key = process.env.ELEVENLABS_API_KEY;
     
     // Seleziona la voce in base alla lingua
@@ -28,6 +32,8 @@ export async function POST(req) {
     }
     
     if (!key || !voiceId) throw new Error('Mancano ELEVENLABS_API_KEY o ELEVENLABS_VOICE_ID');
+    
+    console.log('Using voice ID:', voiceId, 'for language:', language);
 
     const elevenRes = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream`,
@@ -38,15 +44,21 @@ export async function POST(req) {
           'xi-api-key':   key
         },
         body: JSON.stringify({
-          text,
+          text: text.trim(),
           model_id: 'eleven_flash_v2_5',
-          stream:   false,
+          stream: false,
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.75,
             style: 0.8,
             use_speaker_boost: true
-          }
+          },
+          pronunciation_dictionary_locators: [],
+          seed: null,
+          previous_text: null,
+          next_text: null,
+          previous_request_ids: [],
+          next_request_ids: []
         })
       }
     );

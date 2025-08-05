@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import AudioPlayer from './AudioPlayer';
 import ClickableCategory from './ClickableCategory';
 
 export default function ActivityCard({
@@ -194,11 +193,10 @@ export default function ActivityCard({
         {/* Audio guida */}
         {audio_guide_text && (
           <div className="my-4 border-t pt-4">
-            <div className="font-medium mb-2 text-gray-800" id="audio-guide-label">{translations.audioGuide[currentLang]}</div>
-            <AudioPlayer text={audio_guide_text} language={currentLang} aria-labelledby="audio-guide-label" />
+            <div className="font-medium mb-2 text-gray-800">{translations.audioGuide[currentLang]}</div>
+            <p className="text-gray-700 mb-4">{audio_guide_text}</p>
           </div>
         )}
-        <p className="text-gray-700 mb-4">{audio_guide_text?.slice(0,100)+"... "+translations.listenMore[currentLang]}</p>
 
         <div className="text-gray-800 mb-4 space-y-1 text-sm" role="list" aria-label="Informazioni di contatto">
           <div role="listitem"><span className="font-medium">{translations.address[currentLang]}:</span> {address}</div>

@@ -12,7 +12,7 @@ import { welcomeMessages } from './config/welcomeMessages';
 import '../chat.css';
 import './taoleia-style.css';
 import './central-audio-player.css';
-// audio-toggle.css è stato rimosso poiché il pulsante è integrato nel VideoPlayer
+import './audio-toggle.css';
 import './components/InstallPWA.css';
 import MapView from './components/MapView';
 import NewsletterForm from './components/newsletter/NewsletterForm';
@@ -23,7 +23,7 @@ import LanguageSelector from './components/languageselector.jsx';
 import { useConversationLogger } from '../hooks/useConversationLogger';
 import { useAudioManager } from './hooks/useAudioManager';
 import CentralAudioPlayer from './components/CentralAudioPlayer';
-// AudioToggle è stato integrato direttamente nel VideoPlayer
+import AudioToggle from './components/AudioToggle';
 import AccessibilityMenu from './components/AccessibilityMenu';
 import LoadingIndicator from './components/LoadingIndicator';
 import InstallPWA from './components/InstallPWA';
@@ -275,7 +275,7 @@ export default function TaoleiaChat() {
           stopCurrentAudio();
           
           // Riproduci l'audio della risposta usando il sistema centralizzato
-          await playAudio(full);
+          await playAudio(full, currentLanguage);
 
           welcomeMessageSentRef.current = true;
         } catch (error) {
@@ -683,7 +683,7 @@ export default function TaoleiaChat() {
       stopCurrentAudio();
       
       // Riproduci l'audio della risposta usando il sistema centralizzato
-      await playAudio(full);
+      await playAudio(full, currentLanguage);
 
     } catch (error) {
       console.error('Error:', error);
@@ -823,8 +823,7 @@ export default function TaoleiaChat() {
             videoUrl="/parla.mp4"
             isPlaying={isPlaying && !showCategoryMenu}
             className="object-cover w-full h-full"
-            isMuted={!isAudioEnabled}
-            onMuteToggle={toggleAudioEnabled}
+            isMuted={true}
           />
           
           {/* Player audio centralizzato */}
@@ -843,6 +842,12 @@ export default function TaoleiaChat() {
           onLanguageChange={handleSpeechLanguageChange}
         />
       </div>
+
+      {/* Pulsante toggle audio */}
+      <AudioToggle 
+        isAudioEnabled={isAudioEnabled}
+        onToggle={toggleAudioEnabled}
+      />
 
       {/* Contenuti che scorrono sotto il video */}
       <div className="flex flex-col pt-[25vh] h-full rounded-full">

@@ -66,7 +66,7 @@ export default function ChatMessages({
                   <LoadingIndicator type="dots" size="medium" />
                 ) : (
                   <ClickableCategory 
-                    key={`message-${i}-${Date.now()}`} 
+                    key={`message-${i}`} 
                     onCategoryClick={onCategoryClick}
                   >
                     {m.content}

@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useCategoriesCache } from '../hooks/useCategoriesCache';
 
 export default function ClickableCategory({ children, onCategoryClick }) {
-  const [items, setItems]     = useState([]); // [{ category, translated_name, names: [...] }, …]
-  const [activities, setActivities] = useState([]); // Attività recuperate da get-activities
-  const [loading, setLoading] = useState(true);
+  const { categories: items, activities, loading } = useCategoriesCache();
   const [currentLanguage, setCurrentLanguage] = useState('it'); // Lingua corrente
 
   // Rileva la lingua corrente dal localStorage o dall'URL
@@ -22,124 +21,7 @@ export default function ClickableCategory({ children, onCategoryClick }) {
     setCurrentLanguage(detectedLang);
   }, []);
 
-  // 1) fetch + cache con aggiornamento all'apertura dell'app
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch('/api/get-categories');
-        if (!res.ok) throw new Error(`Errore HTTP: ${res.status}`);
-        const data = await res.json();
-        // Verifica che i dati abbiano la struttura corretta
-        if (data && data.categories && Array.isArray(data.categories)) {
-          setItems(data.categories);
-        } else {
-          setItems([]);
-        }
-        localStorage.setItem('categoriesCache', JSON.stringify(data));
-        localStorage.setItem('categoriesCacheTimestamp', Date.now().toString());
-        setLoading(false);
-      } catch (error) {
-        // Prova a usare i dati dalla cache se disponibili
-        const cache = localStorage.getItem('categoriesCache');
-        if (cache) {
-          try {
-            const data = JSON.parse(cache);
-            if (data && data.categories) {
-              setItems(data.categories);
-            }
-          } catch (e) {
-            // Errore silenzioso
-          }
-        }
-        setLoading(false);
-      }
-    };
-    
-    // Funzione per recuperare le attività
-    const fetchActivities = async () => {
-      try {
-        const res = await fetch('/api/get-activities');
-        if (!res.ok) throw new Error(`Errore HTTP: ${res.status}`);
-        const data = await res.json();
-        
-        if (data && data.activities && Array.isArray(data.activities)) {
-          setActivities(data.activities);
-          localStorage.setItem('activitiesCache', JSON.stringify(data));
-          localStorage.setItem('activitiesCacheTimestamp', Date.now().toString());
-        } else {
-          setActivities([]);
-        }
-      } catch (error) {
-        // Prova a usare i dati dalla cache se disponibili
-        const cache = localStorage.getItem('activitiesCache');
-        if (cache) {
-          try {
-            const data = JSON.parse(cache);
-            if (data && data.activities) {
-              setActivities(data.activities);
-            }
-          } catch (e) {
-            // Errore silenzioso
-          }
-        }
-      }
-    };
-
-    // Controlla se è necessario aggiornare la cache delle categorie
-    const timestamp = localStorage.getItem('categoriesCacheTimestamp');
-    const now = Date.now();
-    const cacheAge = timestamp ? now - parseInt(timestamp) : Infinity;
-    const cacheExpired = cacheAge > 3600000; // 1 ora
-
-    if (cacheExpired) {
-      fetchCategories();
-    } else {
-      // Usa la cache se disponibile e non scaduta
-      const cache = localStorage.getItem('categoriesCache');
-      if (cache) {
-        try {
-          const data = JSON.parse(cache);
-          if (data && data.categories) {
-            setItems(data.categories);
-            setLoading(false);
-          } else {
-            fetchCategories();
-          }
-        } catch (e) {
-          fetchCategories();
-        }
-      } else {
-        fetchCategories();
-      }
-    }
-    
-    // Controlla se è necessario aggiornare la cache delle attività
-    const activitiesTimestamp = localStorage.getItem('activitiesCacheTimestamp');
-    const activitiesCacheAge = activitiesTimestamp ? now - parseInt(activitiesTimestamp) : Infinity;
-    const activitiesCacheExpired = activitiesCacheAge > 3600000; // 1 ora
-    
-    if (activitiesCacheExpired) {
-      fetchActivities();
-    } else {
-      // Usa la cache se disponibile e non scaduta
-      const activitiesCache = localStorage.getItem('activitiesCache');
-      if (activitiesCache) {
-        try {
-          const data = JSON.parse(activitiesCache);
-          if (data && data.activities) {
-            setActivities(data.activities);
-          } else {
-            fetchActivities();
-          }
-        } catch (e) {
-          fetchActivities();
-        }
-      } else {
-        fetchActivities();
-      }
-    }
-  }, []);
+  // Le categorie e attività vengono ora caricate tramite il hook useCategoriesCache
 
   // Funzione per normalizzare il testo (rimuove accenti, converte in minuscolo)
   const normalizeText = text => {

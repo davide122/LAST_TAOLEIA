@@ -28,7 +28,7 @@ export function useAudioManager() {
     }
   };
 
-  const playAudio = async (text) => {
+  const playAudio = async (text, language = 'it') => {
     if (!text.trim()) return;
     
     // Se l'audio è disabilitato, non fare nulla
@@ -47,7 +47,7 @@ export function useAudioManager() {
       const res = await fetch('/api/elevenlabs-tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ text, language })
       });
 
       if (!res.ok) {

@@ -1,7 +1,7 @@
 /* Stili per il pulsante di attivazione/disattivazione audio */
 .audio-toggle-container {
   position: fixed;
-  bottom: 80px;
+  top: 20px;
   right: 20px;
   z-index: 70;
 }
