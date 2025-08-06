@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { FiPlay, FiPause, FiLoader } from 'react-icons/fi';
 import ClickableCategory from './ClickableCategory';
+import { useAudioManager } from '../hooks/useAudioManager';
 
 export default function ActivityCard({
   name,
@@ -18,11 +20,40 @@ export default function ActivityCard({
   images = [],   // array di {url, alt, main}
   onCategoryClick
 }) {
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [showFullAudioText, setShowFullAudioText] = useState(false);
   const [current, setCurrent] = useState(0);
   const total = images.length;
+  
+  // Hook per gestire l'audio
+  const { playAudio, isPlaying, isAudioEnabled } = useAudioManager();
 
   const prev = () => setCurrent((current - 1 + total) % total);
   const next = () => setCurrent((current + 1) % total);
+  
+  // Funzione per riprodurre l'audio guida
+  const handlePlayAudioGuide = async () => {
+    if (audio_guide_text && isAudioEnabled && !isAudioLoading) {
+      setIsAudioLoading(true);
+      try {
+        await playAudio(audio_guide_text);
+      } catch (error) {
+        console.error('Errore durante la riproduzione audio:', error);
+      } finally {
+        setIsAudioLoading(false);
+      }
+    }
+  };
+
+  // Funzione per limitare il testo dell'audio guida
+  const getDisplayedAudioText = (text) => {
+    if (!text) return '';
+    const maxLength = 150;
+    if (text.length <= maxLength || showFullAudioText) {
+      return text;
+    }
+    return text.substring(0, maxLength) + '...';
+  };
 
   // Traduzioni per le etichette dell'interfaccia
   const translations = {
@@ -88,6 +119,20 @@ export default function ActivityCard({
       fr: 'Écoutez le guide audio pour en savoir plus',
       es: 'Escucha la guía de audio para saber más',
       de: 'Hören Sie den Audio-Guide, um mehr zu erfahren'
+    },
+    showMore: {
+      it: 'Mostra altro',
+      en: 'Show more',
+      fr: 'Afficher plus',
+      es: 'Mostrar más',
+      de: 'Mehr anzeigen'
+    },
+    showLess: {
+      it: 'Mostra meno',
+      en: 'Show less',
+      fr: 'Afficher moins',
+      es: 'Mostrar menos',
+      de: 'Weniger anzeigen'
     }
   };
 
@@ -193,8 +238,43 @@ export default function ActivityCard({
         {/* Audio guida */}
         {audio_guide_text && (
           <div className="my-4 border-t pt-4">
-            <div className="font-medium mb-2 text-gray-800">{translations.audioGuide[currentLang]}</div>
-            <p className="text-gray-700 mb-4">{audio_guide_text}</p>
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-medium text-gray-800 flex items-center gap-2">
+                <span className="text-lg">🎧</span>
+                {translations.audioGuide[currentLang]}
+              </div>
+              <button
+                onClick={handlePlayAudioGuide}
+                disabled={!isAudioEnabled || isAudioLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                aria-label={translations.listenMore[currentLang]}
+              >
+                {isAudioLoading ? (
+                  <FiLoader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FiPlay className="w-4 h-4" />
+                )}
+                <span className="text-sm font-medium">
+                  {isAudioLoading ? 'Caricamento...' : 'Ascolta'}
+                </span>
+              </button>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
+              <p className="text-gray-700 leading-relaxed">
+                {getDisplayedAudioText(audio_guide_text)}
+              </p>
+              {audio_guide_text && audio_guide_text.length > 150 && (
+                <button
+                  onClick={() => setShowFullAudioText(!showFullAudioText)}
+                  className="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium underline transition-colors"
+                >
+                  {showFullAudioText 
+                    ? translations.showLess[currentLang] 
+                    : translations.showMore[currentLang]
+                  }
+                </button>
+              )}
+            </div>
           </div>
         )}
 

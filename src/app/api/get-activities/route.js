@@ -10,7 +10,8 @@ export async function GET() {
         latitude,
         longitude,
         category,
-        address
+        address,
+        audio_guide_text
       FROM activities
       WHERE latitude IS NOT NULL AND longitude IS NOT NULL
     `;
@@ -22,7 +23,8 @@ export async function GET() {
         description: activity.description,
         position: [parseFloat(activity.latitude), parseFloat(activity.longitude)],
         category: activity.category,
-        address: activity.address
+        address: activity.address,
+        audio_guide_text: activity.audio_guide_text
       }))
     });
   } catch (error) {
