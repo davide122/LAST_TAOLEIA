@@ -26,14 +26,23 @@ export default function ActivityCard({
   const total = images.length;
   
   // Hook per gestire l'audio
-  const { playAudio, isPlaying, isAudioEnabled } = useAudioManager();
+  const { playAudio, isAudioEnabled, isPlaying, togglePlayPause, stopCurrentAudio, audioElementRef } = useAudioManager();
 
   const prev = () => setCurrent((current - 1 + total) % total);
   const next = () => setCurrent((current + 1) % total);
   
-  // Funzione per riprodurre l'audio guida
+  // Funzione per gestire play/pause dell'audio guida
   const handlePlayAudioGuide = async () => {
-    if (audio_guide_text && isAudioEnabled && !isAudioLoading) {
+    if (!audio_guide_text || !isAudioEnabled) return;
+    
+    // Se c'è già un audio caricato (in pausa o in riproduzione), usa solo toggle
+    if (audioElementRef.current) {
+      togglePlayPause();
+      return;
+    }
+    
+    // Solo se non c'è nessun audio caricato, fai una nuova chiamata API
+    if (!isAudioLoading) {
       setIsAudioLoading(true);
       try {
         await playAudio(audio_guide_text);
@@ -133,6 +142,20 @@ export default function ActivityCard({
       fr: 'Afficher moins',
       es: 'Mostrar menos',
       de: 'Weniger anzeigen'
+    },
+    pause: {
+      it: 'Pausa',
+      en: 'Pause',
+      fr: 'Pause',
+      es: 'Pausa',
+      de: 'Pause'
+    },
+    listen: {
+      it: 'Ascolta',
+      en: 'Listen',
+      fr: 'Écouter',
+      es: 'Escuchar',
+      de: 'Anhören'
     }
   };
 
@@ -247,15 +270,17 @@ export default function ActivityCard({
                 onClick={handlePlayAudioGuide}
                 disabled={!isAudioEnabled || isAudioLoading}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
-                aria-label={translations.listenMore[currentLang]}
+                aria-label={isPlaying ? `${translations.pause[currentLang]} audio guida` : translations.listenMore[currentLang]}
               >
                 {isAudioLoading ? (
                   <FiLoader className="w-4 h-4 animate-spin" />
+                ) : isPlaying ? (
+                  <FiPause className="w-4 h-4" />
                 ) : (
                   <FiPlay className="w-4 h-4" />
                 )}
                 <span className="text-sm font-medium">
-                  {isAudioLoading ? 'Caricamento...' : 'Ascolta'}
+                  {isAudioLoading ? 'Caricamento...' : isPlaying ? translations.pause[currentLang] : translations.listen[currentLang]}
                 </span>
               </button>
             </div>
