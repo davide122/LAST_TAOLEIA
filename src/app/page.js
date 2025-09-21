@@ -642,6 +642,27 @@ export default function TaoleiaChat() {
           catch { continue; }
           if (obj.type === 'tool_call_result') {
             setMessages(m => [...m, { role: 'tool', data: obj.data }]);
+            
+            // Salva la scheda nel database se è presente conversationId
+            if (conversationId && obj.data) {
+              // Determina il tipo di scheda basandosi sui dati disponibili
+              let toolType = obj.data.type || 'unknown';
+              if (toolType === 'unknown') {
+                if (obj.data.category && obj.data.recommendations) {
+                  toolType = 'menu';
+                } else if (obj.data.name || obj.data.description || obj.data.address) {
+                  toolType = 'activity';
+                }
+              }
+              
+              await logMessage('tool', JSON.stringify(obj.data), {
+                timestamp: new Date().toISOString(),
+                language: currentLanguage,
+                toolType: toolType,
+                cardData: obj.data
+              });
+            }
+            
             continue;
           }
           if (obj.object === 'thread.message.delta' && obj.delta?.content) {
@@ -671,12 +692,14 @@ export default function TaoleiaChat() {
         return c;
       });
 
-      // Log della risposta finale dell'assistente
-      if (conversationId) {
+      // Log della risposta finale dell'assistente (solo se non è vuota)
+      if (conversationId && full && full.trim()) {
         await logMessage('assistant', full, {
           timestamp: new Date().toISOString(),
           language: currentLanguage
         });
+      } else if (conversationId && (!full || !full.trim())) {
+        console.warn('⚠️ Risposta dell\'assistente vuota, non salvata nel database');
       }
 
       // Ferma qualsiasi audio in riproduzione prima di riprodurre il nuovo
