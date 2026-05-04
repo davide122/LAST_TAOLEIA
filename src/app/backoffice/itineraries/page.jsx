@@ -79,9 +79,7 @@ export default function ItinerariesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#082c33] to-[#1E4E68] text-[#FEF5E7]">
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
@@ -232,8 +230,6 @@ export default function ItinerariesPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
     </div>
   );
 }

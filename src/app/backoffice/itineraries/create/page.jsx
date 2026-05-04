@@ -7,13 +7,35 @@ import { FiArrowLeft, FiSave, FiPlus, FiCalendar, FiClock, FiTrash2, FiMove, FiL
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 
+const newClientId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `cid-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const toMinutes = (time) => {
+  if (typeof time !== 'string' || !/^\d{2}:\d{2}$/.test(time)) return 0;
+  const [h, m] = time.split(':').map(n => parseInt(n, 10));
+  return (h * 60) + m;
+};
+
+const fromMinutes = (minutes) => {
+  const m = Math.max(0, Math.min(23 * 60 + 59, minutes));
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${h.toString().padStart(2, '0')}:${mm.toString().padStart(2, '0')}`;
+};
+
+const addMinutes = (time, delta) => fromMinutes(toMinutes(time) + delta);
+
 // Componente per un singolo giorno dell'itinerario
 const ItineraryDay = ({ day, activities, onAddActivity, onRemoveActivity, onMoveActivity, setActivities }) => {
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'activity',
     drop: (item) => {
       if (item.dayIndex !== day.index) {
-        onMoveActivity(item.index, item.dayIndex, day.index);
+        onMoveActivity(item.clientId, item.dayIndex, day.index);
       }
     },
     collect: (monitor) => ({
@@ -45,9 +67,8 @@ const ItineraryDay = ({ day, activities, onAddActivity, onRemoveActivity, onMove
           .filter(activity => activity.dayIndex === day.index)
           .map((activity, index) => (
             <DraggableActivity 
-              key={activity.id || index}
+              key={activity.clientId}
               activity={activity}
-              index={index}
               dayIndex={day.index}
               onRemove={onRemoveActivity}
               activities={activities}
@@ -71,7 +92,7 @@ const ItineraryDay = ({ day, activities, onAddActivity, onRemoveActivity, onMove
 const DraggableActivity = ({ activity, index, dayIndex, onRemove, activities, setActivities }) => {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'activity',
-    item: { index, dayIndex },
+    item: { clientId: activity.clientId, dayIndex },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
@@ -94,7 +115,7 @@ const DraggableActivity = ({ activity, index, dayIndex, onRemove, activities, se
   const saveTimeChanges = () => {
     // Trova l'indice dell'attività nell'array activities
     const activityIndex = activities.findIndex(
-      (a) => (a.id === activity.id || a === activity) && a.dayIndex === dayIndex
+      (a) => a.clientId === activity.clientId
     );
 
     if (activityIndex !== -1) {
@@ -221,7 +242,7 @@ const DraggableActivity = ({ activity, index, dayIndex, onRemove, activities, se
             </div>
           </div>
           <button
-            onClick={() => onRemove(activity.id || index, dayIndex)}
+            onClick={() => onRemove(activity.clientId)}
             className="p-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
             title="Elimina attività"
           >
@@ -394,6 +415,7 @@ export default function CreateItineraryPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   
   // Stato dell'itinerario
   const [itinerary, setItinerary] = useState({
@@ -409,53 +431,63 @@ export default function CreateItineraryPage() {
   // Gestione del cambio di input
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setItinerary({ ...itinerary, [name]: value });
+    const nextValue = name === 'days' ? (parseInt(value, 10) || 1) : value;
+    setItinerary({ ...itinerary, [name]: nextValue });
 
     // Se cambia il numero di giorni, aggiorna l'array dei giorni
     if (name === 'days') {
-      const daysCount = parseInt(value) || 1;
+      const daysCount = nextValue;
       const newDays = Array.from({ length: daysCount }, (_, i) => ({ index: i }));
       setDays(newDays);
+      setSelectedDayIndex((prev) => Math.max(0, Math.min(daysCount - 1, prev)));
+      setActivities((prev) => prev.filter(a => a.dayIndex < daysCount));
     }
+  };
+
+  const computeTimeSlot = (dayIndex, durationMinutes = 60) => {
+    const dayActivities = activities
+      .filter(a => a.dayIndex === dayIndex)
+      .slice()
+      .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    const last = dayActivities[dayActivities.length - 1];
+    const start = last?.endTime ? addMinutes(last.endTime, 15) : '09:00';
+    const end = addMinutes(start, durationMinutes);
+    return { startTime: start, endTime: end };
   };
 
   // Aggiunge un'attività a un giorno specifico
   const handleAddActivity = (dayIndex, activity = null) => {
+    const duration = activity?.duration ? parseInt(activity.duration, 10) : 60;
+    const { startTime, endTime } = computeTimeSlot(dayIndex, Number.isFinite(duration) ? duration : 60);
     const newActivity = activity ? {
       ...activity,
+      clientId: newClientId(),
       dayIndex,
-      startTime: '09:00',
-      endTime: '10:00',
+      startTime,
+      endTime,
     } : {
-      id: `temp-${Date.now()}`,
+      clientId: newClientId(),
       title: 'Nuova Attività',
       dayIndex,
-      startTime: '09:00',
-      endTime: '10:00',
+      startTime,
+      endTime,
     };
     
     setActivities([...activities, newActivity]);
   };
 
   // Rimuove un'attività
-  const handleRemoveActivity = (activityId, dayIndex) => {
-    setActivities(activities.filter((a, i) => 
-      a.id !== activityId || (a.id === activityId && a.dayIndex !== dayIndex)
-    ));
+  const handleRemoveActivity = (clientId) => {
+    setActivities(activities.filter(a => a.clientId !== clientId));
   };
 
   // Sposta un'attività da un giorno all'altro
-  const handleMoveActivity = (activityIndex, fromDayIndex, toDayIndex) => {
-    const updatedActivities = [...activities];
-    const activityToMove = activities.find(
-      (a, i) => i === activityIndex && a.dayIndex === fromDayIndex
-    );
+  const handleMoveActivity = (clientId, fromDayIndex, toDayIndex) => {
+    const activityToMove = activities.find(a => a.clientId === clientId && a.dayIndex === fromDayIndex);
     
     if (activityToMove) {
       const newActivity = { ...activityToMove, dayIndex: toDayIndex };
-      const filteredActivities = activities.filter(
-        (a, i) => !(i === activityIndex && a.dayIndex === fromDayIndex)
-      );
+      const filteredActivities = activities.filter(a => a.clientId !== clientId);
       
       setActivities([...filteredActivities, newActivity]);
     }
@@ -474,12 +506,18 @@ export default function CreateItineraryPage() {
 
       const itineraryData = {
         ...itinerary,
-        activities: activities.map(a => ({
-          id: a.id,
+        activities: activities
+          .slice()
+          .sort((a, b) => {
+            if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
+            return (a.startTime || '').localeCompare(b.startTime || '');
+          })
+          .map(a => ({
           title: a.title,
           dayIndex: a.dayIndex,
           startTime: a.startTime,
           endTime: a.endTime,
+          description: a.description || '',
         })),
       };
 
@@ -508,9 +546,7 @@ export default function CreateItineraryPage() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-gradient-to-br from-[#082c33] to-[#1E4E68] text-[#FEF5E7]">
-        <div className="p-8">
-          <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto">
             {/* Header */}
             <div className="flex justify-between items-center mb-8">
               <div>
@@ -634,8 +670,29 @@ export default function CreateItineraryPage() {
               <div className="lg:col-span-1">
                 <ActivitySelector 
                   activities={[]}
-                  onSelect={(activity) => handleAddActivity(0, activity)}
+                  onSelect={(activity) => handleAddActivity(selectedDayIndex, activity)}
                 />
+
+                <div className="bg-[#FEF5E7]/5 backdrop-blur-sm rounded-xl p-6 mb-6 border border-[#FEF5E7]/10">
+                  <h3 className="text-xl font-semibold text-[#FEF5E7] mb-4">Giorno target</h3>
+                  <div className="flex items-center gap-3">
+                    <FiCalendar className="text-[#FEF5E7]/60" />
+                    <select
+                      className="w-full bg-[#FEF5E7]/10 backdrop-blur-sm rounded-xl border border-[#FEF5E7]/20 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FEF5E7]/30 text-[#FEF5E7]"
+                      value={selectedDayIndex}
+                      onChange={(e) => setSelectedDayIndex(parseInt(e.target.value, 10))}
+                    >
+                      {days.map((d) => (
+                        <option key={d.index} value={d.index}>
+                          Giorno {d.index + 1}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="mt-3 text-sm text-[#FEF5E7]/70">
+                    Le attività selezionate dal pannello laterale verranno aggiunte qui.
+                  </p>
+                </div>
                 
                 <div className="bg-[#FEF5E7]/5 backdrop-blur-sm rounded-xl p-6 border border-[#FEF5E7]/10">
                   <h3 className="text-xl font-semibold text-[#FEF5E7] mb-6">Suggerimenti</h3>
@@ -657,8 +714,6 @@ export default function CreateItineraryPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
     </DndProvider>
   );
 }

@@ -18,6 +18,20 @@ async function retryFetch(url, options, maxRetries = 3) {
   throw lastError;
 }
 
+function extractSseData(block) {
+  const lines = block.split(/\r?\n/);
+  const dataLines = [];
+  for (const line of lines) {
+    if (line.startsWith('data:')) {
+      dataLines.push(line.slice(5).trimStart());
+    }
+  }
+  if (dataLines.length === 0) return null;
+  const joined = dataLines.join('\n');
+  const trimmed = joined.trim();
+  return trimmed.length ? trimmed : null;
+}
+
 export async function POST(req) {
   try {
     const { message, threadId } = await req.json();
@@ -36,6 +50,14 @@ export async function POST(req) {
       console.error('Errore nel recupero della lingua:', err);
     }
 
+    const overlayGuidelines = [
+      `IMPORTANT: Highlight ONLY the most important terms by wrapping them in double brackets like [[...]].`,
+      `Use [[...]] only for real entities the user can click to explore: places, monuments, museums, beaches, restaurants, neighborhoods, or specific activities.`,
+      `Max 2–4 highlights per response. Never highlight generic words (e.g. "centro", "migliore", "consiglio").`,
+      `Example: "Ti consiglio [[Teatro Greco]] e [[Isola Bella]]."`,
+      `Do not explain the brackets. Do not output any other special markup.`,
+    ].join(' ');
+
     // === 1) apri o crea thread ===
     let tid = threadId;
     if (!tid) {
@@ -49,7 +71,7 @@ export async function POST(req) {
         body: JSON.stringify({ 
           messages: [{ 
             role: 'user', 
-            content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. Here is my message:\n\n${message} max token 200, max world 200.` 
+            content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. ${overlayGuidelines} Here is my message:\n\n${message} max token 200, max world 200.` 
           }] 
         })
       });
@@ -81,7 +103,7 @@ export async function POST(req) {
             body: JSON.stringify({ 
               messages: [{ 
                 role: 'user', 
-                content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. Here is my message:\n\n${message}` 
+                content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. ${overlayGuidelines} Here is my message:\n\n${message}` 
               }] 
             })
           });
@@ -100,7 +122,7 @@ export async function POST(req) {
               },
               body: JSON.stringify({ 
                 role: 'user', 
-                content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages.` 
+                content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. ${overlayGuidelines}` 
               })
             }
           );
@@ -138,7 +160,7 @@ export async function POST(req) {
           body: JSON.stringify({ 
             messages: [{ 
               role: 'user', 
-              content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. Here is my message:\n\n${message}` 
+              content: `IMPORTANT: You must respond ONLY in ${selectedLanguage.toUpperCase()} language. Do not mix languages. ${overlayGuidelines} Here is my message:\n\n${message}` 
             }] 
           })
         });
@@ -177,7 +199,22 @@ export async function POST(req) {
                 }
               }
             },
-            
+            {
+              type: 'function',
+              function: {
+                name: 'open_menu',
+                description: 'Apre un menu tematico e restituisce una lista di raccomandazioni',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    category: { type: 'string', description: 'Categoria del menu' },
+                    recommendations: { type: 'array', items: { type: 'object' } }
+                  },
+                  required: ['category', 'recommendations'],
+                  additionalProperties: false
+                }
+              }
+            }
           ]
         })
       }
@@ -198,9 +235,105 @@ export async function POST(req) {
     const sse = new ReadableStream({
       async start(controller) {
         let buffer = '';
+        const processBlock = async (block) => {
+          const data = extractSseData(block);
+          if (!data) return false;
+          if (data === '[DONE]') {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+            controller.close();
+            return true;
+          }
+          let event;
+          try { event = JSON.parse(data); }
+          catch { return false; }
+
+          if (event.object === 'thread.run' &&
+              event.required_action?.type === 'submit_tool_outputs') {
+            for (const call of event.required_action.submit_tool_outputs.tool_calls) {
+              if (call.function.name === 'open_activity_card') {
+                const args = JSON.parse(call.function.arguments);
+                const res = await fetch(`${baseUrl}/api/open-activity-card`, {
+                  method:  'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body:    JSON.stringify({
+                    query: args.query,
+                    lang: args.lang || selectedLanguage
+                  })
+                });
+
+                const result = await res.json();
+
+                await fetch(
+                  `https://api.openai.com/v1/threads/${tid}/runs/${event.id}/submit_tool_outputs`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type':  'application/json',
+                      'Authorization': `Bearer ${apiKey}`,
+                      'OpenAI-Beta':   'assistants=v2'
+                    },
+                    body: JSON.stringify({
+                      tool_outputs: [{
+                        tool_call_id: call.id,
+                        output:       JSON.stringify(result)
+                      }]
+                    })
+                  }
+                );
+
+                controller.enqueue(encoder.encode(
+                  `data: ${JSON.stringify({ type: 'tool_call_result', data: result })}\n\n`
+                ));
+              } else if (call.function.name === 'open_menu') {
+                const args = JSON.parse(call.function.arguments);
+                const res = await fetch(`${baseUrl}/api/open-menu`, {
+                  method:  'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body:    JSON.stringify({
+                    category: args.category,
+                    recommendations: args.recommendations
+                  })
+                });
+
+                const result = await res.json();
+
+                await fetch(
+                  `https://api.openai.com/v1/threads/${tid}/runs/${event.id}/submit_tool_outputs`,
+                  {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type':  'application/json',
+                      'Authorization': `Bearer ${apiKey}`,
+                      'OpenAI-Beta':   'assistants=v2'
+                    },
+                    body: JSON.stringify({
+                      tool_outputs: [{
+                        tool_call_id: call.id,
+                        output:       JSON.stringify(result)
+                      }]
+                    })
+                  }
+                );
+
+                controller.enqueue(encoder.encode(
+                  `data: ${JSON.stringify({ type: 'tool_call_result', data: result })}\n\n`
+                ));
+              }
+            }
+            return false;
+          }
+
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+          return false;
+        };
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
+            if (buffer.trim()) {
+              const ended = await processBlock(buffer);
+              if (ended) return;
+            }
             controller.close();
             break;
           }
@@ -209,106 +342,8 @@ export async function POST(req) {
           buffer = chunks.pop();
 
           for (const chunk of chunks) {
-            const line = chunk.split(/\r?\n/).find(l => l.startsWith('data:'));
-            if (!line) continue;
-            const data = line.slice(5).trim();
-            if (data === '[DONE]') {
-              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-              controller.close();
-              return;
-            }
-            let event;
-            try { event = JSON.parse(data); }
-            catch { continue; }
-
-            // gestione function-calling
-            if (event.object === 'thread.run' &&
-                event.required_action?.type === 'submit_tool_outputs') {
-              for (const call of event.required_action.submit_tool_outputs.tool_calls) {
-                if (call.function.name === 'open_activity_card') {
-                  const args = JSON.parse(call.function.arguments);
-                  const res = await fetch(`${baseUrl}/api/open-activity-card`, {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify({ 
-                      query: args.query,
-                      lang: args.lang || selectedLanguage
-                    })
-                  });
-                   
-                  const result = await res.json();
-
-                  // invia output a OpenAI
-                  await fetch(
-                    `https://api.openai.com/v1/threads/${tid}/runs/${event.id}/submit_tool_outputs`,
-                    {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type':  'application/json',
-                        'Authorization': `Bearer ${apiKey}`,
-                        'OpenAI-Beta':   'assistants=v2'
-                      },
-                      body: JSON.stringify({
-                        tool_outputs: [{
-                          tool_call_id: call.id,
-                          output:       JSON.stringify(result)
-                        }]
-                      })
-                    }
-                  );
-
-                  // inoltra subito al client
-                  controller.enqueue(encoder.encode(
-                    `data: ${JSON.stringify({ type: 'tool_call_result', data: result })}
-
-`
-                  ));
-                }
-                else if (call.function.name === 'open_menu') {
-                  const args = JSON.parse(call.function.arguments);
-                  const res = await fetch(`${baseUrl}/api/open-menu`, {
-                    method:  'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify({ 
-                      category: args.category,
-                      recommendations: args.recommendations
-                    })
-                  });
-                   
-                  const result = await res.json();
-
-                  // invia output a OpenAI
-                  await fetch(
-                    `https://api.openai.com/v1/threads/${tid}/runs/${event.id}/submit_tool_outputs`,
-                    {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type':  'application/json',
-                        'Authorization': `Bearer ${apiKey}`,
-                        'OpenAI-Beta':   'assistants=v2'
-                      },
-                      body: JSON.stringify({
-                        tool_outputs: [{
-                          tool_call_id: call.id,
-                          output:       JSON.stringify(result)
-                        }]
-                      })
-                    }
-                  );
-
-                  // inoltra subito al client
-                  controller.enqueue(encoder.encode(
-                    `data: ${JSON.stringify({ type: 'tool_call_result', data: result })}
-
-`
-                  ));
-                }
-              }
-              continue;
-            }
-
-            // tutti gli altri eventi
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+            const ended = await processBlock(chunk);
+            if (ended) return;
           }
         }
       }
@@ -320,7 +355,8 @@ export async function POST(req) {
         'Cache-Control':             'no-cache, no-transform',
         'Connection':                'keep-alive',
         'X-Thread-Id':               tid,
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'X-Thread-Id'
       }
     });
 

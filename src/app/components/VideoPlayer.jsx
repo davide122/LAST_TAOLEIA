@@ -2,66 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-// Mappa dei fonemi e delle espressioni per il lip sync
-const EXPRESSION_MAP = {
-  // Espressioni base
-  'neutral': {
-    frames: [0, 1, 2],
-    weight: 1.0
-  },
-  'happy': {
-    frames: [3, 4, 5],
-    weight: 0.8
-  },
-  'thinking': {
-    frames: [6, 7, 8],
-    weight: 0.6
-  },
-  
-  // Fonemi principali con espressioni
-  'a': {
-    frames: [9, 10, 11],
-    weight: 1.0,
-    expression: 'happy'
-  },
-  'e': {
-    frames: [12, 13, 14],
-    weight: 0.9,
-    expression: 'neutral'
-  },
-  'i': {
-    frames: [15, 16, 17],
-    weight: 0.8,
-    expression: 'thinking'
-  },
-  'o': {
-    frames: [18, 19, 20],
-    weight: 1.0,
-    expression: 'happy'
-  },
-  'u': {
-    frames: [21, 22, 23],
-    weight: 0.7,
-    expression: 'neutral'
-  },
-  
-  // Consonanti con espressioni
-  'b': {
-    frames: [24, 25],
-    weight: 0.8,
-    expression: 'neutral'
-  },
-  'p': {
-    frames: [26, 27],
-    weight: 0.9,
-    expression: 'happy'
-  },
-  'm': {
-    frames: [28, 29],
-    weight: 0.7,
-    expression: 'thinking'
-  }
-};
+const clamp01 = (value) => Math.max(0, Math.min(1, value));
+const lerp = (a, b, t) => a + (b - a) * t;
 
 export default function VideoPlayer({ 
   videoUrl, 
@@ -69,66 +11,20 @@ export default function VideoPlayer({
   onPlaybackChange, 
   className,
   isMuted = true,
-  onMuteToggle
+  onMuteToggle,
+  lipSyncAudioRef,
+  lipSyncActive = false
 }) {
   const videoRef = useRef(null);
   const [error, setError] = useState(null);
   const [isLooping, setIsLooping] = useState(true);
   const lastPlayTimeRef = useRef(0);
-  const frameCountRef = useRef(0);
-  const lastFrameTimeRef = useRef(0);
-  const audioContextRef = useRef(null);
-  const analyserRef = useRef(null);
-  const animationFrameRef = useRef(null);
-
-  // Inizializzazione dell'analizzatore audio
-  const initAudioAnalysis = () => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      analyserRef.current = audioContextRef.current.createAnalyser();
-      analyserRef.current.fftSize = 256;
-    }
-  };
-
-  // Funzione per ottenere l'energia audio
-  const getAudioEnergy = () => {
-    if (!analyserRef.current) return 0;
-    
-    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-    analyserRef.current.getByteFrequencyData(dataArray);
-    
-    // Calcola l'energia media
-    const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-    return average / 128.0; // Normalizza tra 0 e 1
-  };
-
-  // Funzione per determinare l'espressione e il fonema corrente
-  const getCurrentExpression = (time) => {
-    // Simula un pattern di espressioni naturali
-    const expressions = ['neutral', 'happy', 'thinking'];
-    const baseIndex = Math.floor(time * 0.5) % expressions.length; // Cambia ogni 2 secondi
-    
-    // Aggiungi variazioni naturali
-    const variation = Math.sin(time * 2) * 0.3; // Variazione sinusoidale
-    const weight = 0.7 + variation; // Peso tra 0.4 e 1.0
-    
-    return {
-      expression: expressions[baseIndex],
-      weight: weight
-    };
-  };
-
-  // Funzione per ottenere i frame con interpolazione
-  const getFramesWithInterpolation = (currentPhoneme, nextPhoneme, progress) => {
-    const currentFrames = EXPRESSION_MAP[currentPhoneme]?.frames || EXPRESSION_MAP.neutral.frames;
-    const nextFrames = EXPRESSION_MAP[nextPhoneme]?.frames || EXPRESSION_MAP.neutral.frames;
-    
-    // Interpolazione tra i frame
-    const currentFrame = currentFrames[Math.floor(progress * currentFrames.length)];
-    const nextFrame = nextFrames[Math.floor(progress * nextFrames.length)];
-    
-    return Math.floor(currentFrame + (nextFrame - currentFrame) * progress);
-  };
+  const mouthRef = useRef(null);
+  const lipSyncAudioContextRef = useRef(null);
+  const lipSyncAnalyserRef = useRef(null);
+  const lipSyncSourceRef = useRef(null);
+  const lipSyncRafRef = useRef(null);
+  const lipSyncPrevRef = useRef({ open: 0, width: 0.5, round: 0.2, intensity: 0, v: 'A' });
 
   // Gestione della riproduzione
   useEffect(() => {
@@ -178,6 +74,135 @@ export default function VideoPlayer({
     return () => video.removeEventListener('error', handleError);
   }, []);
 
+  useEffect(() => {
+    const mount = mouthRef.current;
+    const audioEl = lipSyncAudioRef?.current;
+
+    const stop = () => {
+      if (lipSyncRafRef.current) {
+        cancelAnimationFrame(lipSyncRafRef.current);
+        lipSyncRafRef.current = null;
+      }
+      if (lipSyncSourceRef.current) {
+        try { lipSyncSourceRef.current.disconnect(); } catch {}
+        lipSyncSourceRef.current = null;
+      }
+      if (lipSyncAnalyserRef.current) {
+        try { lipSyncAnalyserRef.current.disconnect(); } catch {}
+        lipSyncAnalyserRef.current = null;
+      }
+      if (mount) {
+        mount.style.setProperty('--mouth-open', '0');
+        mount.style.setProperty('--mouth-width', '0.5');
+        mount.style.setProperty('--mouth-round', '0.2');
+        mount.style.setProperty('--mouth-intensity', '0');
+        mount.dataset.viseme = 'A';
+      }
+    };
+
+    if (!lipSyncActive || !audioEl || !mount) {
+      stop();
+      return;
+    }
+
+    let cancelled = false;
+
+    const start = async () => {
+      try {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return;
+
+        if (!lipSyncAudioContextRef.current) {
+          lipSyncAudioContextRef.current = new AudioContextCtor();
+        }
+        const ctx = lipSyncAudioContextRef.current;
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+        }
+
+        if (!lipSyncAnalyserRef.current) {
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.65;
+          lipSyncAnalyserRef.current = analyser;
+        }
+
+        if (lipSyncSourceRef.current) {
+          try { lipSyncSourceRef.current.disconnect(); } catch {}
+          lipSyncSourceRef.current = null;
+        }
+
+        const source = ctx.createMediaElementSource(audioEl);
+        lipSyncSourceRef.current = source;
+        source.connect(lipSyncAnalyserRef.current);
+        lipSyncAnalyserRef.current.connect(ctx.destination);
+
+        const data = new Uint8Array(lipSyncAnalyserRef.current.frequencyBinCount);
+        const smoothing = 0.25;
+
+        const tick = () => {
+          if (cancelled) return;
+          lipSyncAnalyserRef.current.getByteFrequencyData(data);
+
+          let sum = 0;
+          let sub = 0, low = 0, mid = 0, high = 0, veryHigh = 0;
+          const n = data.length;
+          for (let i = 0; i < n; i++) {
+            const v = data[i] / 255;
+            sum += v;
+            if (i < 4) sub += v;
+            else if (i < 10) low += v;
+            else if (i < 26) mid += v;
+            else if (i < 50) high += v;
+            else veryHigh += v;
+          }
+          const energy = sum / n;
+
+          const targetOpen = clamp01((energy - 0.03) / 0.33);
+          const targetRound = clamp01((low - high + 0.15) / 0.55);
+          const targetWidth = clamp01((mid - low + 0.15) / 0.55);
+          const targetIntensity = clamp01(energy);
+
+          let simple = 'C';
+          if (energy < 0.04) simple = 'A';
+          else if (targetOpen < 0.18) simple = 'B';
+          else if (targetRound > 0.68) simple = targetOpen < 0.38 ? 'F' : 'E';
+          else if (targetOpen > 0.78) simple = 'D';
+          else if (targetWidth > 0.66) simple = 'C';
+
+          const prev = lipSyncPrevRef.current;
+          const next = {
+            open: lerp(prev.open, targetOpen, smoothing),
+            width: lerp(prev.width, targetWidth, smoothing),
+            round: lerp(prev.round, targetRound, smoothing),
+            intensity: lerp(prev.intensity, targetIntensity, smoothing),
+            v: simple
+          };
+          lipSyncPrevRef.current = next;
+
+          mount.style.setProperty('--mouth-open', next.open.toFixed(3));
+          mount.style.setProperty('--mouth-width', next.width.toFixed(3));
+          mount.style.setProperty('--mouth-round', next.round.toFixed(3));
+          mount.style.setProperty('--mouth-intensity', next.intensity.toFixed(3));
+          mount.dataset.viseme = next.v;
+
+          lipSyncRafRef.current = requestAnimationFrame(tick);
+        };
+
+        lipSyncRafRef.current = requestAnimationFrame(tick);
+      } catch {
+        stop();
+      }
+    };
+
+    start();
+
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, [lipSyncActive, lipSyncAudioRef]);
+
   return (
     <div className="relative w-full h-full">
       {error && (
@@ -195,6 +220,40 @@ export default function VideoPlayer({
         loop={isLooping}
         preload="auto"
       />
+
+      <div
+        ref={mouthRef}
+        className="absolute left-1/2 top-[62%] -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
+        style={{
+          width: '38%',
+          maxWidth: 160,
+          opacity: lipSyncActive ? 0.92 : 0,
+          transition: 'opacity 160ms ease',
+          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))'
+        }}
+      >
+        <svg viewBox="0 0 120 80" width="100%" height="100%" aria-hidden="true">
+          <g
+            style={{
+              transformOrigin: '60px 40px',
+              transform: 'scaleX(calc(0.9 + var(--mouth-width) * 0.35 - var(--mouth-round) * 0.12)) scaleY(calc(0.22 + var(--mouth-open) * 0.95))'
+            }}
+          >
+            <ellipse cx="60" cy="44" rx="34" ry="10" fill="rgba(180, 60, 70, 0.95)" />
+            <ellipse
+              cx="60"
+              cy="46"
+              rx="28"
+              ry="6"
+              fill="rgba(40, 12, 12, 0.95)"
+              style={{
+                transformOrigin: '60px 46px',
+                transform: 'scaleY(calc(0.25 + var(--mouth-open) * 1.2))'
+              }}
+            />
+          </g>
+        </svg>
+      </div>
       
       {/* Pulsante muto integrato nel player */}
       {onMuteToggle && (

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiPlay, FiPause, FiSkipBack, FiSkipForward } from 'react-icons/fi';
 
-export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause }) {
+export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause, variant = 'default' }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -67,17 +67,19 @@ export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause })
   };
 
   return (
-    <div className="central-audio-player">
+    <div className={`central-audio-player${variant === 'compact' ? ' central-audio-player--compact' : ''}`}>
       <div className="audio-controls">
-        <button 
-          className="audio-control-button" 
-          onClick={handleBackward}
-          aria-label="Indietro di 10 secondi"
-          disabled={!audioRef?.current}
-        >
-          <FiSkipBack />
-        </button>
-        
+        {variant !== 'compact' && (
+          <button 
+            className="audio-control-button" 
+            onClick={handleBackward}
+            aria-label="Indietro di 10 secondi"
+            disabled={!audioRef?.current}
+          >
+            <FiSkipBack />
+          </button>
+        )}
+
         <button 
           className="audio-control-button play-pause" 
           onClick={onPlayPause}
@@ -86,33 +88,37 @@ export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause })
         >
           {isPlaying ? <FiPause /> : <FiPlay />}
         </button>
-        
-        <button 
-          className="audio-control-button" 
-          onClick={handleForward}
-          aria-label="Avanti di 10 secondi"
-          disabled={!audioRef?.current}
-        >
-          <FiSkipForward />
-        </button>
+
+        {variant !== 'compact' && (
+          <button 
+            className="audio-control-button" 
+            onClick={handleForward}
+            aria-label="Avanti di 10 secondi"
+            disabled={!audioRef?.current}
+          >
+            <FiSkipForward />
+          </button>
+        )}
       </div>
-      
-      <div className="audio-progress-container">
-        <div 
-          ref={progressRef}
-          className="audio-progress-bar" 
-          onClick={handleProgressClick}
-        >
+
+      {variant !== 'compact' && (
+        <div className="audio-progress-container">
           <div 
-            className="audio-progress" 
-            style={{ width: `${progress}%` }}
-          ></div>
+            ref={progressRef}
+            className="audio-progress-bar" 
+            onClick={handleProgressClick}
+          >
+            <div 
+              className="audio-progress" 
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+          <div className="audio-time">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
         </div>
-        <div className="audio-time">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

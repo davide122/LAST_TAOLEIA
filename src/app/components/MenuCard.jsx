@@ -21,6 +21,13 @@ export default function MenuCard({ category, recommendations, timestamp, type, l
       es: 'Recomendaciones:',
       de: 'Empfehlungen:'
     },
+    itinerary: {
+      it: 'Programma:',
+      en: 'Plan:',
+      fr: 'Programme:',
+      es: 'Plan:',
+      de: 'Plan:'
+    },
     expand: {
       it: 'Espandi sezione',
       en: 'Expand section',
@@ -39,6 +46,7 @@ export default function MenuCard({ category, recommendations, timestamp, type, l
 
   // Usa la lingua corrente o fallback a italiano
   const currentLang = language_code && translations.recommendations[language_code] ? language_code : 'it';
+  const listLabel = type === 'itinerary' ? translations.itinerary[currentLang] : translations.recommendations[currentLang];
 
   const headingId = `category-heading-${category.replace(/\s+/g, '-').toLowerCase()}`;
   const contentId = `category-content-${category.replace(/\s+/g, '-').toLowerCase()}`;
@@ -75,7 +83,7 @@ export default function MenuCard({ category, recommendations, timestamp, type, l
       {/* Contenuto espandibile */}
       {expanded && (
         <div className="p-4" id={contentId}>
-          <h4 className="text-md font-medium mb-2" id="recommendations-heading">{translations.recommendations[currentLang]}</h4>
+          <h4 className="text-md font-medium mb-2" id="recommendations-heading">{listLabel}</h4>
           <ul 
             className="list-disc pl-5 space-y-1" 
             aria-labelledby="recommendations-heading"

@@ -1,12 +1,28 @@
 import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
+import jwt from 'jsonwebtoken';
+import { cookies } from 'next/headers';
 
 // Inizializza la connessione al database
 const sql = neon(process.env.DATABASE_URL);
 
+function isValidTime(value) {
+  return typeof value === 'string' && /^\d{2}:\d{2}$/.test(value);
+}
+
 // POST - Crea un nuovo itinerario
 export async function POST(request) {
   try {
+    const authToken = cookies().get('authToken');
+    if (!authToken) {
+      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
+    }
+    try {
+      jwt.verify(authToken.value, process.env.JWT_SECRET);
+    } catch {
+      return NextResponse.json({ error: 'Token non valido' }, { status: 401 });
+    }
+
     const data = await request.json();
     
     // Validazione base
@@ -29,6 +45,11 @@ export async function POST(request) {
     // Se ci sono attività, inseriscile nella tabella itinerary_activities
     if (data.activities && Array.isArray(data.activities) && data.activities.length > 0) {
       for (const activity of data.activities) {
+        if (!activity?.title) continue;
+        const dayIndex = Number.isFinite(activity.dayIndex) ? activity.dayIndex : parseInt(activity.dayIndex, 10);
+        if (!Number.isFinite(dayIndex) || dayIndex < 0) continue;
+        if (!isValidTime(activity.startTime) || !isValidTime(activity.endTime)) continue;
+
         await sql`
           INSERT INTO itinerary_activities (
             itinerary_id, title, day_index, start_time, end_time, description
@@ -36,7 +57,7 @@ export async function POST(request) {
           VALUES (
             ${newItinerary.id},
             ${activity.title},
-            ${activity.dayIndex},
+            ${dayIndex},
             ${activity.startTime},
             ${activity.endTime},
             ${activity.description || null}

@@ -32,7 +32,7 @@ export default function ChatMessages({
   // Funzione per renderizzare il contenuto del tool in base al tipo
   const renderToolContent = (data) => {
     const currentLang = getPreferredLanguage();
-    if (data.type === 'menu') {
+    if (data.type === 'menu' || data.type === 'itinerary') {
       return <MenuCard {...data} language_code={currentLang} onCategoryClick={onCategoryClick} />;
     }
     return <ActivityCard {...data} language_code={currentLang} onCategoryClick={onCategoryClick} />;
