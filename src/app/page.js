@@ -949,7 +949,7 @@ export default function TaoleiaChat() {
 
       {/* Video con bordi arrotondati - dimensioni ridotte - nascosto quando il menu categorie è aperto */}
       {!showCategoryMenu && (
-        <div className="relative w-full h-[20vh] sm:h-[22vh] md:h-[26vh] flex-shrink-0 z-50 overflow-hidden rounded-3xl p-3">
+        <div className="absolute top-0 left-0 w-full h-[24vh] sm:h-[28vh] md:h-[32vh] z-50 overflow-hidden rounded-3xl p-3">
           <VideoPlayer
             videoUrl="/parla.mp4"
             isPlaying={isPlaying && !showCategoryMenu}
@@ -983,9 +983,9 @@ export default function TaoleiaChat() {
       />
 
       {/* Contenuti che scorrono sotto il video */}
-      <div className="flex flex-col flex-1 min-h-0 rounded-full">
+      <div className="flex flex-col pt-[24vh] sm:pt-[28vh] md:pt-[32vh] h-full rounded-full">
         {/* Area dinamica */}
-        <div className="relative flex-1 min-h-0">
+        <div className="relative flex-1">
           {/* CHAT */}
           {activeTab === 'chat' && (
             <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3" role="list" aria-live="polite">
