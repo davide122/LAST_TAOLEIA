@@ -15,14 +15,18 @@ export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause, v
     if (!audio) return;
 
     const updateProgress = () => {
-      if (audio.duration) {
+      const hasDuration = Number.isFinite(audio.duration) && audio.duration > 0;
+      if (hasDuration) {
         setProgress((audio.currentTime / audio.duration) * 100);
         setCurrentTime(audio.currentTime);
+      } else {
+        setProgress(0);
+        setCurrentTime(audio.currentTime || 0);
       }
     };
 
     const handleLoadedMetadata = () => {
-      setDuration(audio.duration);
+      setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
     };
 
     audio.addEventListener('timeupdate', updateProgress);
@@ -45,6 +49,7 @@ export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause, v
   // Gestisce il click sulla barra di progresso
   const handleProgressClick = (e) => {
     if (!audioRef?.current || !progressRef.current) return;
+    if (!Number.isFinite(audioRef.current.duration) || audioRef.current.duration <= 0) return;
     
     const rect = progressRef.current.getBoundingClientRect();
     const clickPosition = (e.clientX - rect.left) / rect.width;
@@ -101,7 +106,7 @@ export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause, v
         )}
       </div>
 
-      {variant !== 'compact' && (
+      {(variant !== 'compact') && (
         <div className="audio-progress-container">
           <div 
             ref={progressRef}
@@ -116,6 +121,22 @@ export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause, v
           <div className="audio-time">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
+          </div>
+        </div>
+      )}
+
+      {variant === 'compact' && (
+        <div className="audio-progress-container audio-progress-container--compact">
+          <div 
+            ref={progressRef}
+            className="audio-progress-bar" 
+            onClick={handleProgressClick}
+            aria-hidden={!Number.isFinite(duration) || duration <= 0}
+          >
+            <div 
+              className="audio-progress" 
+              style={{ width: `${progress}%` }}
+            ></div>
           </div>
         </div>
       )}

@@ -232,27 +232,7 @@ export default function VideoPlayer({
           filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))'
         }}
       >
-        <svg viewBox="0 0 120 80" width="100%" height="100%" aria-hidden="true">
-          <g
-            style={{
-              transformOrigin: '60px 40px',
-              transform: 'scaleX(calc(0.9 + var(--mouth-width) * 0.35 - var(--mouth-round) * 0.12)) scaleY(calc(0.22 + var(--mouth-open) * 0.95))'
-            }}
-          >
-            <ellipse cx="60" cy="44" rx="34" ry="10" fill="rgba(180, 60, 70, 0.95)" />
-            <ellipse
-              cx="60"
-              cy="46"
-              rx="28"
-              ry="6"
-              fill="rgba(40, 12, 12, 0.95)"
-              style={{
-                transformOrigin: '60px 46px',
-                transform: 'scaleY(calc(0.25 + var(--mouth-open) * 1.2))'
-              }}
-            />
-          </g>
-        </svg>
+      
       </div>
       
       {/* Pulsante muto integrato nel player */}
