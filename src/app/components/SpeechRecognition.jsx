@@ -5,7 +5,6 @@ import { speechLanguages } from '../config/languages';
 export default function SpeechRecognition({ 
   currentLanguage, 
   onTranscriptChange, 
-  onBargeIn,
   disabled = false 
 }) {
   const [isListening, setIsListening] = useState(false);
@@ -35,7 +34,6 @@ export default function SpeechRecognition({
           console.log('Speech recognition started');
           setIsListening(true);
           isAutoStopped = false;
-          if (onBargeIn) onBargeIn();
         };
         
         rec.onend = () => {
@@ -137,7 +135,6 @@ export default function SpeechRecognition({
         }
       } else {
         console.log('Starting speech recognition');
-        if (onBargeIn) onBargeIn();
         if (!recRef.current) {
           console.warn('Speech recognition not initialized, reinitializing...');
           if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
@@ -150,7 +147,6 @@ export default function SpeechRecognition({
               rec.onstart = () => {
                 console.log('Speech recognition started (reinitialized)');
                 setIsListening(true);
-                if (onBargeIn) onBargeIn();
               };
               
               rec.onend = () => {

@@ -34,25 +34,6 @@ import CategoryMenu from './components/CategoryMenu';
 import WelcomeGuide from './components/WelcomeGuide';
 import FeatureIntroduction from './components/FeatureIntroduction';
 
-function extractSseData(block) {
-  const lines = block.split(/\r?\n/);
-  const dataLines = [];
-  for (const line of lines) {
-    if (line.startsWith('data:')) {
-      dataLines.push(line.slice(5).trimStart());
-    }
-  }
-  if (dataLines.length === 0) return null;
-  const joined = dataLines.join('\n');
-  const trimmed = joined.trim();
-  return trimmed.length ? trimmed : null;
-}
-
-function stripOverlayMarkup(text) {
-  if (!text || typeof text !== 'string') return '';
-  return text.replace(/\[\[([^\]]+)\]\]/g, '$1');
-}
-
 export default function TaoleiaChat() {
   // --- STATE & REF ---
   const [activeTab, setActiveTab]   = useState('chat');
@@ -86,7 +67,6 @@ export default function TaoleiaChat() {
   const chatRecRef = useRef(null);
   const UI_THROTTLE_MS = 100;
   const lastUiUpdateRef = useRef(0);
-  const streamAbortRef = useRef(null);
 
   // Rimossi riferimenti a useAudioPlayer
 
@@ -107,7 +87,7 @@ export default function TaoleiaChat() {
     logError 
   } = useConversationLogger();
 
-  const { playAudio, startRealtimePcmStream, pushRealtimePcmChunk, isPlaying, togglePlayPause, stopCurrentAudio, audioElementRef: audioManagerRef, isAudioEnabled, toggleAudioEnabled } = useAudioManager();
+  const { playAudio, isPlaying, togglePlayPause, stopCurrentAudio, audioElementRef: audioManagerRef, isAudioEnabled, toggleAudioEnabled } = useAudioManager();
   
   // Inizializza l'hook per i dati offline
   const { 
@@ -137,15 +117,6 @@ export default function TaoleiaChat() {
       console.log('Audio fermato dopo cambio scheda');
     }
   }, [activeTab, isPlaying, stopCurrentAudio]);
-
-  useEffect(() => {
-    return () => {
-      if (streamAbortRef.current) {
-        streamAbortRef.current.abort();
-        streamAbortRef.current = null;
-      }
-    };
-  }, []);
 
   // --- EFFECT: Registrazione del service worker ---
   useEffect(() => {
@@ -227,20 +198,13 @@ export default function TaoleiaChat() {
           }
 
           // Invia il messaggio all'assistente con la lingua corretta
-          if (streamAbortRef.current) {
-            streamAbortRef.current.abort();
-          }
-          const abortController = new AbortController();
-          streamAbortRef.current = abortController;
-
           const res = await fetch('/api/taoleia-agent-stream', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'x-selected-language': storedLanguage
             },
-            body: JSON.stringify({ message: welcomeMessage, threadId }),
-            signal: abortController.signal
+            body: JSON.stringify({ message: welcomeMessage, threadId })
           });
           
           const newTid = res.headers.get('X-Thread-Id');
@@ -261,8 +225,9 @@ export default function TaoleiaChat() {
             const parts = buf.split(/\r?\n\r?\n/);
             buf = parts.pop();
             for (const p of parts) {
-              const data = extractSseData(p);
-              if (!data) continue;
+              const line = p.split(/\r?\n/).find(l => l.startsWith('data:'));
+              if (!line) continue;
+              const data = line.slice(5).trim();
               if (data === '[DONE]') continue;
               let obj;
               try { obj = JSON.parse(data); }
@@ -289,22 +254,6 @@ export default function TaoleiaChat() {
               }
             }
           }
-          if (buf.trim()) {
-            const data = extractSseData(buf);
-            if (data && data !== '[DONE]') {
-              try {
-                const obj = JSON.parse(data);
-                if (obj.type === 'tool_call_result') {
-                  setMessages(m => [...m, { role: 'tool', data: obj.data }]);
-                } else if (obj.object === 'thread.message.delta' && obj.delta?.content) {
-                  const delta = obj.delta.content
-                    .filter(i => i.type === 'text')
-                    .map(i => i.text.value).join('');
-                  full += delta;
-                }
-              } catch {}
-            }
-          }
           
           // Aggiungi la risposta finale dell'assistente
           setMessages(m => {
@@ -326,11 +275,10 @@ export default function TaoleiaChat() {
           stopCurrentAudio();
           
           // Riproduci l'audio della risposta usando il sistema centralizzato
-          await playAudio(stripOverlayMarkup(full), currentLanguage);
+          await playAudio(full, currentLanguage);
 
           welcomeMessageSentRef.current = true;
         } catch (error) {
-          if (error?.name === 'AbortError') return;
           console.error('Errore nell\'invio del messaggio di benvenuto:', error);
           if (conversationId) {
             await logError('Errore nell\'invio del messaggio di benvenuto', { error });
@@ -659,32 +607,20 @@ export default function TaoleiaChat() {
         }
       }
 
-      if (streamAbortRef.current) {
-        streamAbortRef.current.abort();
-      }
-      const abortController = new AbortController();
-      streamAbortRef.current = abortController;
-
-      const response = await fetch('/api/taoleia-agent-realtime', {
+      const response = await fetch('/api/taoleia-agent-stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-selected-language': currentLanguage
         },
-        body: JSON.stringify({ message: text, threadId }),
-        signal: abortController.signal
+        body: JSON.stringify({ message: text, threadId })
       });
 
       if (!response.ok) throw new Error('Network response was not ok');
 
-      const newTid = response.headers.get('X-Thread-Id');
-      if (newTid) setThreadId(newTid);
-
       const reader = response.body.getReader();
       const dec = new TextDecoder();
       let buf = '', full = '';
-
-      const realtimeStarted = await startRealtimePcmStream();
 
       // Aggiungi il placeholder del messaggio dell'assistente immediatamente
       // Questo verrà mostrato con l'indicatore di caricamento
@@ -697,19 +633,13 @@ export default function TaoleiaChat() {
         const parts = buf.split(/\r?\n\r?\n/);
         buf = parts.pop();
         for (const p of parts) {
-          const data = extractSseData(p);
-          if (!data) continue;
+          const line = p.split(/\r?\n/).find(l => l.startsWith('data:'));
+          if (!line) continue;
+          const data = line.slice(5).trim();
           if (data === '[DONE]') continue;
           let obj;
           try { obj = JSON.parse(data); }
           catch { continue; }
-          if (obj?.type === 'audio_chunk' && obj.audio) {
-            pushRealtimePcmChunk(obj.audio, obj.sampleRate || 24000);
-            continue;
-          }
-          if (obj?.type === 'audio_end' || obj?.type === 'audio_error') {
-            continue;
-          }
           if (obj.type === 'tool_call_result') {
             setMessages(m => [...m, { role: 'tool', data: obj.data }]);
             
@@ -753,22 +683,6 @@ export default function TaoleiaChat() {
           }
         }
       }
-      if (buf.trim()) {
-        const data = extractSseData(buf);
-        if (data && data !== '[DONE]') {
-          try {
-            const obj = JSON.parse(data);
-            if (obj.type === 'tool_call_result') {
-              setMessages(m => [...m, { role: 'tool', data: obj.data }]);
-            } else if (obj.object === 'thread.message.delta' && obj.delta?.content) {
-              const delta = obj.delta.content
-                .filter(i => i.type === 'text')
-                .map(i => i.text.value).join('');
-              full += delta;
-            }
-          } catch {}
-        }
-      }
 
       // Aggiorna il messaggio finale e riproduci l'audio
       setMessages(m => {
@@ -788,16 +702,13 @@ export default function TaoleiaChat() {
         console.warn('⚠️ Risposta dell\'assistente vuota, non salvata nel database');
       }
 
-      if (!realtimeStarted) {
-        stopCurrentAudio();
-        await playAudio(stripOverlayMarkup(full), currentLanguage);
-      }
+      // Ferma qualsiasi audio in riproduzione prima di riprodurre il nuovo
+      stopCurrentAudio();
+      
+      // Riproduci l'audio della risposta usando il sistema centralizzato
+      await playAudio(full, currentLanguage);
 
     } catch (error) {
-      if (error?.name === 'AbortError') {
-        setLoading(false);
-        return;
-      }
       console.error('Error:', error);
       setMessages(prev => [...prev, { role: 'assistant', content: 'Mi dispiace, si è verificato un errore.' }]);
       
@@ -834,25 +745,6 @@ export default function TaoleiaChat() {
     setLoading(false);
   };
 
-  const bargeIn = () => {
-    if (streamAbortRef.current) {
-      streamAbortRef.current.abort();
-      streamAbortRef.current = null;
-    }
-    stopCurrentAudio();
-    setLoading(false);
-    setMessages(m => {
-      if (!m.length) return m;
-      const last = m[m.length - 1];
-      if (last?.role === 'assistant' && last?.isLoading) {
-        const c = [...m];
-        c[c.length - 1] = { ...last, isLoading: false };
-        return c;
-      }
-      return m;
-    });
-  };
-
   // --- RENDER JSX ---
   return (
     <div className="relative w-full h-screen max-w-xl mx-auto flex flex-col z-3 app"
@@ -874,7 +766,7 @@ export default function TaoleiaChat() {
       <>
       {/* <NewsletterForm></NewsletterForm> */}
       </>
-      <img src="/sfondo.png" className="absolute sfocas" alt="" aria-hidden="true" />
+      <img src="/sfondo.png" className='absolute sfocas'></img>
       
       {/* Componente per l'installazione PWA */}
       <InstallPWA />
@@ -949,18 +841,16 @@ export default function TaoleiaChat() {
 
       {/* Video con bordi arrotondati - dimensioni ridotte - nascosto quando il menu categorie è aperto */}
       {!showCategoryMenu && (
-        <div className="absolute top-0 left-0 w-full h-[24vh] sm:h-[28vh] md:h-[32vh] z-50 overflow-hidden rounded-3xl p-3">
+        <div className="absolute top-0 left-0 w-full h-[25vh] z-50 overflow-hidden rounded-3xl p-3">
           <VideoPlayer
             videoUrl="/parla.mp4"
             isPlaying={isPlaying && !showCategoryMenu}
-            className="object-cover object-[50%_40%] md:object-center w-full h-full"
+            className="object-cover w-full h-full"
             isMuted={true}
-            lipSyncAudioRef={audioManagerRef}
-            lipSyncActive={isPlaying && isAudioEnabled}
           />
           
+          {/* Player audio centralizzato */}
           <CentralAudioPlayer 
-            variant="compact"
             audioRef={audioManagerRef}
             isPlaying={isPlaying && !showCategoryMenu}
             onPlayPause={togglePlayPause}
@@ -983,7 +873,7 @@ export default function TaoleiaChat() {
       />
 
       {/* Contenuti che scorrono sotto il video */}
-      <div className="flex flex-col pt-[24vh] sm:pt-[28vh] md:pt-[32vh] h-full rounded-full">
+      <div className="flex flex-col pt-[25vh] h-full rounded-full">
         {/* Area dinamica */}
         <div className="relative flex-1">
           {/* CHAT */}
@@ -1050,26 +940,15 @@ export default function TaoleiaChat() {
                 type="text"
                 className="input-field"
                 value={input}
-                onChange={e => {
-                  bargeIn();
-                  setInput(e.target.value);
-                }}
-                onFocus={bargeIn}
-                onKeyDown={e => {
-                  bargeIn();
-                  if (e.key === 'Enter' && !loading) sendMessage();
-                }}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !loading && sendMessage()}
                 placeholder="Scrivi un messaggio…"
                 disabled={loading || isOffline}
                 aria-label="Messaggio di testo"
               />
               <SpeechRecognition
                 currentLanguage={currentLanguage}
-                onTranscriptChange={(text) => {
-                  bargeIn();
-                  setInput(text);
-                }}
-                onBargeIn={bargeIn}
+                onTranscriptChange={setInput}
                 disabled={loading || isOffline}
               />
               <button

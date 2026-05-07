@@ -5,8 +5,7 @@ export default function ChatInput({
   setInput,
   loading,
   sendMessage,
-  currentLanguage,
-  onBargeIn
+  currentLanguage
 }) {
   // Traduzioni per i placeholder e le etichette in base alla lingua
   const translations = {
@@ -47,17 +46,8 @@ export default function ChatInput({
           type="text"
           className="input-field"
           value={input}
-          onChange={e => {
-            if (onBargeIn) onBargeIn();
-            setInput(e.target.value);
-          }}
-          onFocus={() => {
-            if (onBargeIn) onBargeIn();
-          }}
-          onKeyDown={e => {
-            if (onBargeIn) onBargeIn();
-            if (e.key === 'Enter' && !loading) sendMessage();
-          }}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !loading && sendMessage()}
           placeholder={t.placeholder}
           disabled={loading}
           aria-label={t.placeholder}
@@ -65,11 +55,7 @@ export default function ChatInput({
         />
         <SpeechRecognition
           currentLanguage={currentLanguage}
-          onTranscriptChange={(text) => {
-            if (onBargeIn) onBargeIn();
-            setInput(text);
-          }}
-          onBargeIn={onBargeIn}
+          onTranscriptChange={setInput}
           disabled={loading}
         />
         <button

@@ -1,33 +1,12 @@
 import { NextResponse } from 'next/server';
 import { neon } from '@neondatabase/serverless';
-import jwt from 'jsonwebtoken';
-import { cookies } from 'next/headers';
 
 // Inizializza la connessione al database
 const sql = neon(process.env.DATABASE_URL);
 
-function isValidTime(value) {
-  return typeof value === 'string' && /^\d{2}:\d{2}$/.test(value);
-}
-
-function requireAuth() {
-  const authToken = cookies().get('authToken');
-  if (!authToken) return false;
-  try {
-    jwt.verify(authToken.value, process.env.JWT_SECRET);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 // GET - Ottieni un itinerario specifico
 export async function GET(request, { params }) {
   try {
-    if (!requireAuth()) {
-      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
-    }
-
     const { id } = params;
     
     // Recupera l'itinerario dal database
@@ -75,10 +54,6 @@ export async function GET(request, { params }) {
 // PUT - Aggiorna un itinerario esistente
 export async function PUT(request, { params }) {
   try {
-    if (!requireAuth()) {
-      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
-    }
-
     const { id } = params;
     
     // Verifica se l'itinerario esiste
@@ -113,11 +88,6 @@ export async function PUT(request, { params }) {
       
       // Poi inserisci le nuove attività
       for (const activity of updatedData.activities) {
-        if (!activity?.title) continue;
-        const dayIndex = Number.isFinite(activity.dayIndex) ? activity.dayIndex : parseInt(activity.dayIndex, 10);
-        if (!Number.isFinite(dayIndex) || dayIndex < 0) continue;
-        if (!isValidTime(activity.startTime) || !isValidTime(activity.endTime)) continue;
-
         await sql`
           INSERT INTO itinerary_activities (
             itinerary_id, title, day_index, start_time, end_time, description
@@ -125,7 +95,7 @@ export async function PUT(request, { params }) {
           VALUES (
             ${id},
             ${activity.title},
-            ${dayIndex},
+            ${activity.dayIndex},
             ${activity.startTime},
             ${activity.endTime},
             ${activity.description || null}
@@ -169,10 +139,6 @@ export async function PUT(request, { params }) {
 // DELETE - Elimina un itinerario
 export async function DELETE(request, { params }) {
   try {
-    if (!requireAuth()) {
-      return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
-    }
-
     const { id } = params;
     
     // Verifica se l'itinerario esiste

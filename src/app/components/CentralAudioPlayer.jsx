@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiPlay, FiPause, FiSkipBack, FiSkipForward } from 'react-icons/fi';
 
-export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause, variant = 'default' }) {
+export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -15,18 +15,14 @@ export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause, v
     if (!audio) return;
 
     const updateProgress = () => {
-      const hasDuration = Number.isFinite(audio.duration) && audio.duration > 0;
-      if (hasDuration) {
+      if (audio.duration) {
         setProgress((audio.currentTime / audio.duration) * 100);
         setCurrentTime(audio.currentTime);
-      } else {
-        setProgress(0);
-        setCurrentTime(audio.currentTime || 0);
       }
     };
 
     const handleLoadedMetadata = () => {
-      setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+      setDuration(audio.duration);
     };
 
     audio.addEventListener('timeupdate', updateProgress);
@@ -49,7 +45,6 @@ export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause, v
   // Gestisce il click sulla barra di progresso
   const handleProgressClick = (e) => {
     if (!audioRef?.current || !progressRef.current) return;
-    if (!Number.isFinite(audioRef.current.duration) || audioRef.current.duration <= 0) return;
     
     const rect = progressRef.current.getBoundingClientRect();
     const clickPosition = (e.clientX - rect.left) / rect.width;
@@ -72,19 +67,17 @@ export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause, v
   };
 
   return (
-    <div className={`central-audio-player${variant === 'compact' ? ' central-audio-player--compact' : ''}`}>
+    <div className="central-audio-player">
       <div className="audio-controls">
-        {variant !== 'compact' && (
-          <button 
-            className="audio-control-button" 
-            onClick={handleBackward}
-            aria-label="Indietro di 10 secondi"
-            disabled={!audioRef?.current}
-          >
-            <FiSkipBack />
-          </button>
-        )}
-
+        <button 
+          className="audio-control-button" 
+          onClick={handleBackward}
+          aria-label="Indietro di 10 secondi"
+          disabled={!audioRef?.current}
+        >
+          <FiSkipBack />
+        </button>
+        
         <button 
           className="audio-control-button play-pause" 
           onClick={onPlayPause}
@@ -93,53 +86,33 @@ export default function CentralAudioPlayer({ audioRef, isPlaying, onPlayPause, v
         >
           {isPlaying ? <FiPause /> : <FiPlay />}
         </button>
-
-        {variant !== 'compact' && (
-          <button 
-            className="audio-control-button" 
-            onClick={handleForward}
-            aria-label="Avanti di 10 secondi"
-            disabled={!audioRef?.current}
-          >
-            <FiSkipForward />
-          </button>
-        )}
+        
+        <button 
+          className="audio-control-button" 
+          onClick={handleForward}
+          aria-label="Avanti di 10 secondi"
+          disabled={!audioRef?.current}
+        >
+          <FiSkipForward />
+        </button>
       </div>
-
-      {(variant !== 'compact') && (
-        <div className="audio-progress-container">
+      
+      <div className="audio-progress-container">
+        <div 
+          ref={progressRef}
+          className="audio-progress-bar" 
+          onClick={handleProgressClick}
+        >
           <div 
-            ref={progressRef}
-            className="audio-progress-bar" 
-            onClick={handleProgressClick}
-          >
-            <div 
-              className="audio-progress" 
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-          <div className="audio-time">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
+            className="audio-progress" 
+            style={{ width: `${progress}%` }}
+          ></div>
         </div>
-      )}
-
-      {variant === 'compact' && (
-        <div className="audio-progress-container audio-progress-container--compact">
-          <div 
-            ref={progressRef}
-            className="audio-progress-bar" 
-            onClick={handleProgressClick}
-            aria-hidden={!Number.isFinite(duration) || duration <= 0}
-          >
-            <div 
-              className="audio-progress" 
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
+        <div className="audio-time">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
         </div>
-      )}
+      </div>
     </div>
   );
 }

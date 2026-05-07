@@ -5,10 +5,6 @@ export function useAudioManager() {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const currentAudioRef = useRef(null);
   const audioElementRef = useRef(null);
-  const realtimeCtxRef = useRef(null);
-  const realtimeGainRef = useRef(null);
-  const realtimeNextTimeRef = useRef(0);
-  const realtimeSourcesRef = useRef([]);
   
   // Carica le preferenze audio salvate quando il componente viene montato
   useEffect(() => {
@@ -20,122 +16,16 @@ export function useAudioManager() {
     }
   }, []);
 
-  const stopRealtimeAudio = () => {
-    const ctx = realtimeCtxRef.current;
-    if (ctx) {
-      try {
-        for (const src of realtimeSourcesRef.current) {
-          try { src.stop(0); } catch {}
-        }
-      } catch {}
-      realtimeSourcesRef.current = [];
-      realtimeNextTimeRef.current = 0;
-      realtimeGainRef.current = null;
-      realtimeCtxRef.current = null;
-      try { ctx.close(); } catch {}
-    }
-  };
-
   const stopCurrentAudio = () => {
-    stopRealtimeAudio();
-    const audio = currentAudioRef.current;
-    if (!audio) return;
-
-    const src = audio.src;
-    audio.pause();
-    if (src && src.startsWith('blob:')) {
-      URL.revokeObjectURL(src);
-    }
-    audio.src = '';
-    if (typeof audio.load === 'function') {
-      audio.load();
-    }
-    currentAudioRef.current = null;
-    audioElementRef.current = null;
-    setIsPlaying(false);
-  };
-
-  const startRealtimePcmStream = async () => {
-    if (!isAudioEnabled) return false;
-    stopCurrentAudio();
-
-    if (typeof window === 'undefined') return false;
-    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextCtor) return false;
-
-    const ctx = new AudioContextCtor({ sampleRate: 48000 });
-    realtimeCtxRef.current = ctx;
-    realtimeNextTimeRef.current = ctx.currentTime + 0.04;
-
-    const gain = ctx.createGain();
-    gain.gain.value = 1;
-    realtimeGainRef.current = gain;
-
-    const dest = ctx.createMediaStreamDestination();
-    gain.connect(dest);
-
-    const audio = new Audio();
-    audio.autoplay = true;
-    audio.playsInline = true;
-    audio.srcObject = dest.stream;
-    currentAudioRef.current = audio;
-    audioElementRef.current = audio;
-
-    audio.addEventListener('pause', () => setIsPlaying(false));
-    audio.addEventListener('play', () => setIsPlaying(true));
-
-    try {
-      await ctx.resume();
-      await audio.play();
-      setIsPlaying(true);
-    } catch {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.src = '';
+      if (currentAudioRef.current.src) {
+        URL.revokeObjectURL(currentAudioRef.current.src);
+      }
+      currentAudioRef.current = null;
       setIsPlaying(false);
     }
-
-    return true;
-  };
-
-  const pushRealtimePcmChunk = (base64Audio, sampleRate = 24000) => {
-    const ctx = realtimeCtxRef.current;
-    const gain = realtimeGainRef.current;
-    if (!ctx || !gain || !base64Audio) return;
-
-    let bytes;
-    try {
-      const binStr = atob(base64Audio);
-      bytes = new Uint8Array(binStr.length);
-      for (let i = 0; i < binStr.length; i++) bytes[i] = binStr.charCodeAt(i);
-    } catch {
-      return;
-    }
-
-    if (bytes.byteLength < 2) return;
-    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    const frameCount = Math.floor(view.byteLength / 2);
-    const floats = new Float32Array(frameCount);
-    for (let i = 0; i < frameCount; i++) {
-      const s = view.getInt16(i * 2, true);
-      floats[i] = s / 32768;
-    }
-
-    const buffer = ctx.createBuffer(1, floats.length, sampleRate);
-    buffer.copyToChannel(floats, 0);
-
-    const src = ctx.createBufferSource();
-    src.buffer = buffer;
-    src.connect(gain);
-
-    const startAt = Math.max(ctx.currentTime + 0.015, realtimeNextTimeRef.current || ctx.currentTime);
-    try {
-      src.start(startAt);
-    } catch {
-      return;
-    }
-    realtimeNextTimeRef.current = startAt + buffer.duration;
-    realtimeSourcesRef.current.push(src);
-    src.onended = () => {
-      realtimeSourcesRef.current = realtimeSourcesRef.current.filter(s => s !== src);
-    };
   };
 
   const playAudio = async (text, language = 'it') => {
@@ -193,20 +83,8 @@ export function useAudioManager() {
   };
   
   const togglePlayPause = () => {
-    const ctx = realtimeCtxRef.current;
-    if (ctx) {
-      if (isPlaying) {
-        ctx.suspend().catch(() => {});
-        setIsPlaying(false);
-      } else {
-        ctx.resume().catch(() => {});
-        setIsPlaying(true);
-      }
-      return;
-    }
-
     if (!currentAudioRef.current) return;
-
+    
     if (isPlaying) {
       currentAudioRef.current.pause();
     } else {
@@ -231,8 +109,6 @@ export function useAudioManager() {
   return {
     playAudio,
     stopCurrentAudio,
-    startRealtimePcmStream,
-    pushRealtimePcmChunk,
     togglePlayPause,
     isPlaying,
     audioElementRef,
