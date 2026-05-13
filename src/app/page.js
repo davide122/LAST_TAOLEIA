@@ -70,8 +70,6 @@ export default function TaoleiaChat() {
 
   // Rimossi riferimenti a useAudioPlayer
 
-  const endRef             = useRef(null);
-
   const [videoTtsText, setVideoTtsText] = useState('');
 
   const welcomeMessageSentRef = useRef(false);
@@ -104,11 +102,10 @@ export default function TaoleiaChat() {
     }
   }, [threadId, conversationId, currentLanguage, startConversation]);
 
-  // --- EFFECT: auto-scroll chat ---
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // --- EFFETTI ---
   
+  // Rimosso auto-scroll manuale qui, gestito internamente da ChatMessages
+    
   // --- EFFECT: ferma l'audio quando si cambia scheda ---
   useEffect(() => {
     // Ferma l'audio quando l'utente cambia scheda
@@ -747,12 +744,7 @@ export default function TaoleiaChat() {
 
   // --- RENDER JSX ---
   return (
-    <div className="relative w-full h-[100dvh] max-w-xl mx-auto flex flex-col z-3 app overflow-hidden"
-        style={{
-        paddingTop:    'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}
-    >
+    <div className="relative w-full h-[100dvh] max-w-xl mx-auto flex flex-col z-3 app overflow-hidden">
       {/* Modale di selezione lingua */}
       <LanguageModal 
         isOpen={showLanguageModal} 
@@ -842,16 +834,18 @@ export default function TaoleiaChat() {
         />
       </div>
 
-      {/* Contenuti che scorrono sotto il video */}
-      <div className="flex flex-col pt-[30vh] h-full">
-        {/* Area dinamica */}
-        <div className="relative flex-1">
+      {/* Contenuti della chat */}
+      <div className="flex flex-col h-full overflow-hidden">
+        {/* Spacer per il video posizionato in absolute */}
+        <div className="h-[34vh] flex-shrink-0" aria-hidden="true" />
+        
+        {/* Area dinamica (messaggi) */}
+        <div className="relative flex-1 overflow-hidden">
           {/* CHAT */}
           {activeTab === 'chat' && (
-            <div className="absolute inset-0 overflow-y-auto px-4 py-3" role="list" aria-live="polite">
-              <ChatMessages
-                messages={messages}
-                onCategoryClick={(clickedText) => {
+            <ChatMessages
+              messages={messages}
+              onCategoryClick={(clickedText) => {
                     // Traduzioni per "Parlami di" in base alla lingua selezionata
                     const talkAboutTranslations = {
                       it: "Parlami di",
@@ -880,8 +874,6 @@ export default function TaoleiaChat() {
                 lastUiUpdateRef={lastUiUpdateRef}
                 loading={loading}
               />
-              <div ref={endRef} />
-            </div>
           )}
 
           {/* SETTINGS */}
