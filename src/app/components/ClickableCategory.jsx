@@ -294,30 +294,65 @@ export default function ClickableCategory({ children, onCategoryClick }) {
   // Funzione per evidenziare il testo
   const highlight = (text) => {
     if (!text || typeof text !== 'string') return [];
-    const parts = [];
-    let last = 0;
     
+    // 1) Cerca i marker di OpenAI: {parola chiave}
+    const parts = [];
+    const regex = /\{([^}]+)\}/g;
+    let lastIndex = 0;
+    let match;
+    let foundOpenAIMarkers = false;
+
+    while ((match = regex.exec(text)) !== null) {
+      foundOpenAIMarkers = true;
+      // Testo prima del match
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', content: text.slice(lastIndex, match.index) });
+      }
+
+      // Parola chiave evidenziata
+      const keyword = match[1];
+      parts.push({ 
+        type: 'category', 
+        content: keyword, 
+        term: keyword,
+        isOpenAI: true
+      });
+
+      lastIndex = regex.lastIndex;
+    }
+
+    // Aggiungi il testo rimanente se abbiamo trovato marker
+    if (foundOpenAIMarkers) {
+      if (lastIndex < text.length) {
+        parts.push({ type: 'text', content: text.slice(lastIndex) });
+      }
+      return parts;
+    }
+
+    // 2) Fallback alla logica automatica se non ci sono marker { }
+    const automaticParts = [];
+    let last = 0;
     const matches = findTerms(text);
     
     matches.forEach(({ term, start, end, category }) => {
       if (start > last) {
-        parts.push({ type: 'text', content: text.slice(last, start) });
+        automaticParts.push({ type: 'text', content: text.slice(last, start) });
       }
       
-      parts.push({ 
+      automaticParts.push({ 
         type: 'category', 
         content: text.slice(start, end), 
         term,
-        category // Passa l'oggetto categoria completo
+        category
       });
       last = end;
     });
 
     if (last < text.length) {
-      parts.push({ type: 'text', content: text.slice(last) });
+      automaticParts.push({ type: 'text', content: text.slice(last) });
     }
 
-    return parts;
+    return automaticParts;
   };
 
   // Applica l'evidenziazione al testo
@@ -331,7 +366,7 @@ export default function ClickableCategory({ children, onCategoryClick }) {
         p.type === 'category' ? (
           <span
             key={i}
-            className="category-highlight"
+            className={`category-highlight ${p.isOpenAI ? 'openai-highlight' : ''}`}
             onClick={() => onCategoryClick(`${p.content}`)}
             title={p.category ? (p.category.translations && p.category.translations[currentLanguage] || p.category.translated_name || p.category.category) : p.term}
           >

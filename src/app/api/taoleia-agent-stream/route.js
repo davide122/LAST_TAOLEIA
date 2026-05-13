@@ -160,6 +160,14 @@ export async function POST(req) {
         body: JSON.stringify({
           assistant_id: assistant,
           stream:       true,
+          additional_instructions: `
+            IMPORTANT: You are a travel guide for Taormina. 
+            Identify key locations, restaurants, monuments, activities, and categories in your response.
+            Wrap these keywords in curly braces like this: {Teatro Greco}, {Corso Umberto}, {Isola Bella}, {Granita}, {Etna}.
+            Only highlight specific and relevant entities that the user might want to click to learn more.
+            Do not highlight entire sentences, only short keywords (1-4 words).
+            Maintain the user's selected language (${selectedLanguage.toUpperCase()}).
+          `,
           tools: [
             {
               type: 'function',

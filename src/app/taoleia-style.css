@@ -53,16 +53,40 @@
 /* Stile per le categorie cliccabili */
 .category-highlight {
   color: #E3742E;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  padding: 0 2px;
-  border-bottom: 2px solid rgba(227, 116, 46, 0.3);
-  transition: all 0.2s ease;
+  padding: 1px 4px;
+  margin: 0 1px;
+  border-radius: 4px;
+  background-color: rgba(227, 116, 46, 0.05);
+  border-bottom: 2px solid rgba(227, 116, 46, 0.4);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
 }
 
 .category-highlight:hover {
-  background-color: rgba(227, 116, 46, 0.1);
+  background-color: rgba(227, 116, 46, 0.12);
   border-bottom-color: #E3742E;
+  color: #c45e1f;
+}
+
+.category-highlight:active {
+  transform: scale(0.98);
+  background-color: rgba(227, 116, 46, 0.2);
+}
+
+.openai-highlight {
+  position: relative;
+  background-color: rgba(227, 116, 46, 0.1);
+  border-bottom: 2px solid #E3742E;
+}
+
+.openai-highlight::after {
+  content: '✦';
+  font-size: 8px;
+  margin-left: 2px;
+  vertical-align: super;
+  opacity: 0.7;
 }
 
 /* Input bar */
