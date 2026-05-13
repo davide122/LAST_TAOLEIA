@@ -97,25 +97,30 @@ export default function InstallPWA() {
   }
 
   return (
-    <div className="install-pwa-container">
-      <button 
-        onClick={handleInstallClick}
-        className="install-pwa-button"
-        aria-label="Installa l'app"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{marginRight: '8px'}}>
-          <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-          <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-        </svg>
-        {isIOS ? 'Installa su iOS' : 'Installa l\'app'}
-      </button>
-      <button 
-        onClick={handleCloseClick}
-        className="install-pwa-close"
-        aria-label="Chiudi"
-      >
-        ×
-      </button>
+    <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm animate-fade-in-up">
+      <div className="bg-[#0a3b3b]/95 backdrop-blur-lg text-white p-4 rounded-3xl shadow-2xl border border-white/10 flex items-center justify-between">
+        <div className="flex items-center space-x-3" onClick={handleInstallClick}>
+          <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+            </svg>
+          </div>
+          <div>
+            <div className="text-sm font-bold">{isIOS ? 'Aggiungi a Home' : 'Installa Taoleia'}</div>
+            <div className="text-[10px] opacity-70">{isIOS ? 'Tocca condividi e "Aggiungi a Home"' : 'Per un\'esperienza app completa'}</div>
+          </div>
+        </div>
+        <button 
+          onClick={handleCloseClick}
+          className="p-2 hover:bg-white/10 rounded-full transition-colors"
+          aria-label="Chiudi"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }

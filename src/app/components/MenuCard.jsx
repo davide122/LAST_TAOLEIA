@@ -45,13 +45,13 @@ export default function MenuCard({ category, recommendations, timestamp, type, l
   
   return (
     <div 
-      className="w-full max-w-md bg-white rounded-xl shadow-md overflow-hidden mb-4"
+      className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-black/5 overflow-hidden mb-4"
       role="region"
       aria-labelledby={headingId}
     >
       {/* Intestazione con categoria e pulsante di espansione */}
       <div 
-        className="px-4 py-3 bg-blue-600 text-white flex justify-between items-center cursor-pointer"
+        className="px-4 py-3 bg-[#0a3b3b] text-white flex justify-between items-center cursor-pointer transition-colors hover:bg-[#0e5a5a]"
         onClick={() => setExpanded(!expanded)}
         role="button"
         aria-expanded={expanded}
@@ -75,21 +75,24 @@ export default function MenuCard({ category, recommendations, timestamp, type, l
       {/* Contenuto espandibile */}
       {expanded && (
         <div className="p-4" id={contentId}>
-          <h4 className="text-md font-medium mb-2" id="recommendations-heading">{translations.recommendations[currentLang]}</h4>
+          <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2" id="recommendations-heading">{translations.recommendations[currentLang]}</h4>
           <ul 
-            className="list-disc pl-5 space-y-1" 
+            className="space-y-2" 
             aria-labelledby="recommendations-heading"
             role="list"
           >
             {recommendations.map((recommendation, index) => (
-              <li key={index} className="text-gray-700" role="listitem">
-                {onCategoryClick ? (
-                  <ClickableCategory onCategoryClick={onCategoryClick}>
-                    {recommendation}
-                  </ClickableCategory>
-                ) : (
-                  recommendation
-                )}
+              <li key={index} className="text-gray-700 flex items-start" role="listitem">
+                <span className="text-[#E3742E] mr-2">•</span>
+                <span className="flex-1">
+                  {onCategoryClick ? (
+                    <ClickableCategory onCategoryClick={onCategoryClick}>
+                      {recommendation}
+                    </ClickableCategory>
+                  ) : (
+                    recommendation
+                  )}
+                </span>
               </li>
             ))}
           </ul>

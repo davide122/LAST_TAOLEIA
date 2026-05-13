@@ -586,111 +586,95 @@ const CategoryMenu = ({ isVisible, onClose, onCategorySelect, currentLanguage = 
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 backdrop-blur-md bg-black/30 z-50 flex items-center justify-center">
-      <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] overflow-hidden animate-fade-in shadow-2xl mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-white">
+    <div className="fixed inset-0 z-[150] transition-all duration-500 ease-in-out">
+      {/* Sfondo sfocato */}
+      <div 
+        className="absolute inset-0 bg-black/40 backdrop-blur-md animate-fade-in"
+        onClick={onClose}
+      />
+
+      {/* Pannello menu */}
+      <div 
+        className="absolute inset-x-0 bottom-0 max-h-[90vh] bg-white rounded-t-[3rem] shadow-2xl animate-fade-in-up flex flex-col"
+      >
+        {/* Handle per trascinamento (estetico) */}
+        <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mt-4 mb-2" />
+        
+        {/* Intestazione */}
+        <div className="px-6 py-4 flex justify-between items-center border-b border-black/5">
           <div className="flex items-center">
             {selectedCategory && (
               <button
                 onClick={handleBackToCategories}
-                className="mr-2 p-2 rounded-full bg-orange-50 hover:bg-orange-100 transition-all duration-200"
-                aria-label={
-                  currentLanguage === 'en' ? 'Back to categories' :
-                  currentLanguage === 'fr' ? 'Retour aux catégories' :
-                  currentLanguage === 'es' ? 'Volver a las categorías' :
-                  currentLanguage === 'de' ? 'Zurück zu den Kategorien' :
-                  'Torna alle categorie'
-                }
+                className="mr-3 p-2 rounded-full bg-gray-100 text-[#0a3b3b] hover:bg-gray-200 transition-all duration-200"
               >
-                <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
             )}
-            <h2 className="text-lg font-bold text-orange-700">
+            <h2 className="text-2xl font-bold text-[#0a3b3b]">
               {selectedCategory 
                 ? selectedCategory.name 
-                : (currentLanguage === 'en' ? 'Explore Taormina' :
-                   currentLanguage === 'fr' ? 'Explorez Taormina' :
+                : (currentLanguage === 'it' ? 'Esplora Taormina' : 
+                   currentLanguage === 'en' ? 'Explore Taormina' :
+                   currentLanguage === 'fr' ? 'Explorer Taormina' :
                    currentLanguage === 'es' ? 'Explora Taormina' :
-                   currentLanguage === 'de' ? 'Entdecken Sie Taormina' :
-                   'Esplora Taormina')
+                   'Taormina erkunden')
               }
             </h2>
           </div>
-          <button
+          <button 
             onClick={onClose}
-            className="p-2 rounded-full bg-orange-50 hover:bg-orange-100 transition-all duration-200"
-            aria-label={
-              currentLanguage === 'en' ? 'Close menu' :
-              currentLanguage === 'fr' ? 'Fermer le menu' :
-              currentLanguage === 'es' ? 'Cerrar menú' :
-              currentLanguage === 'de' ? 'Menü schließen' :
-              'Chiudi menu'
-            }
+            className="p-2 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
           >
-            <XMarkIcon className="h-5 w-5 text-orange-600" />
+            <XMarkIcon className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(60vh-80px)] p-1">
+        {/* Contenuto scorrevole */}
+        <div className="flex-1 overflow-y-auto p-6">
           {!selectedCategory ? (
-            // Categories Grid
-            <div className="p-3">
-              <div className="grid grid-cols-3 gap-2">
-                {currentCategories.map((category) => {
-                  const IconComponent = category.icon;
-                  return (
-                    <button
-                      key={category.id}
-                      onClick={() => handleCategoryClick(category)}
-                      className="p-2 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200 hover:from-orange-100 hover:to-orange-200 hover:shadow-md transition-all duration-200 text-left group"
-                    >
-                      <div className="flex flex-col items-center text-center">
-                        <div className="p-2 bg-white rounded-full mb-2 shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-200">
-                          <IconComponent className="h-5 w-5 text-orange-600" />
-                        </div>
-                        <h3 className="font-medium text-gray-900 text-xs mb-0">
-                          {category.name}
-                        </h3>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="grid grid-cols-2 gap-4">
+              {currentCategories.map((category) => {
+                const IconComponent = category.icon;
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategoryClick(category)}
+                    className="flex flex-col items-center p-6 bg-gray-50 rounded-3xl border border-black/5 hover:bg-white hover:shadow-xl hover:border-transparent transition-all duration-300 group"
+                  >
+                    <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300 mb-4">
+                      <IconComponent className="w-8 h-8 text-[#E3742E]" />
+                    </div>
+                    <span className="text-sm font-semibold text-[#0a3b3b] text-center">
+                      {category.name}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           ) : (
-            // Category Suggestions
-            <div className="p-3">
-              <div className="mb-3 bg-orange-50 p-3 rounded-lg border border-orange-100">
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  {selectedCategory.description}
-                </p>
+            <div className="animate-fade-in-up">
+              <div className="flex items-center mb-6">
+                <div className="w-16 h-16 bg-[#0a3b3b] rounded-2xl flex items-center justify-center shadow-lg mr-4">
+                  {React.createElement(selectedCategory.icon, { className: "w-10 h-10 text-white" })}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-[#0a3b3b]">{selectedCategory.name}</h3>
+                  <p className="text-gray-500 text-sm">{selectedCategory.description}</p>
+                </div>
               </div>
-              <div className="space-y-1">
+
+              <div className="space-y-3 pb-8">
                 {selectedCategory.suggestions.map((suggestion, index) => (
                   <button
                     key={index}
                     onClick={() => handleSuggestionClick(suggestion)}
-                    className="w-full p-3 text-left bg-white hover:bg-orange-50 rounded-xl border border-orange-100 hover:border-orange-200 hover:shadow-sm transition-all duration-200 group"
+                    className="w-full text-left p-5 bg-gray-50 rounded-2xl border border-black/5 hover:bg-[#E3742E]/5 hover:border-[#E3742E]/30 transition-all duration-200 flex items-center group"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-700 group-hover:text-orange-700 font-medium">
-                        {suggestion}
-                      </span>
-                      <div className="p-1 rounded-full bg-orange-50 group-hover:bg-orange-100 transition-all duration-200">
-                        <svg 
-                          className="w-3 h-3 text-orange-500 group-hover:text-orange-600 transition-colors" 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
+                    <div className="w-2 h-2 rounded-full bg-[#E3742E] mr-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="text-[#0a3b3b] font-medium">{suggestion}</span>
                   </button>
                 ))}
               </div>

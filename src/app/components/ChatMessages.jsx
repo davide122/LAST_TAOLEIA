@@ -42,11 +42,12 @@ export default function ChatMessages({
   const visibleMessages = messages.length > 0 ? messages.slice(1) : [];
 
   return (
-    <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3" role="list" aria-live="polite">
+    <div className="absolute inset-0 overflow-y-auto px-4 py-6 space-y-4" role="list" aria-live="polite">
       {visibleMessages.map((m, i) => (
         <div
           key={i}
-          className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}
+          style={{ animationDelay: `${i * 0.05}s` }}
           role="listitem"
         >
           {m.role === 'tool' ? (

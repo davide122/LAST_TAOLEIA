@@ -5,34 +5,41 @@ export default function ChatInput({
   setInput,
   loading,
   sendMessage,
-  currentLanguage
+  currentLanguage,
+  isOffline,
+  onMenuClick
 }) {
   // Traduzioni per i placeholder e le etichette in base alla lingua
   const translations = {
     it: {
       placeholder: "Scrivi un messaggio…",
       sendLabel: "Invia messaggio",
-      loadingLabel: "Caricamento in corso..."
+      loadingLabel: "Caricamento in corso...",
+      menuLabel: "Menu categorie"
     },
     en: {
       placeholder: "Type a message…",
       sendLabel: "Send message",
-      loadingLabel: "Loading..."
+      loadingLabel: "Loading...",
+      menuLabel: "Category menu"
     },
     fr: {
       placeholder: "Écrivez un message…",
       sendLabel: "Envoyer le message",
-      loadingLabel: "Chargement..."
+      loadingLabel: "Chargement...",
+      menuLabel: "Menu catégories"
     },
     es: {
       placeholder: "Escribe un mensaje…",
       sendLabel: "Enviar mensaje",
-      loadingLabel: "Cargando..."
+      loadingLabel: "Cargando...",
+      menuLabel: "Menú categorías"
     },
     de: {
       placeholder: "Schreibe eine Nachricht…",
       sendLabel: "Nachricht senden",
-      loadingLabel: "Wird geladen..."
+      loadingLabel: "Wird geladen...",
+      menuLabel: "Kategoriemenü"
     }
   };
   
@@ -41,7 +48,27 @@ export default function ChatInput({
   
   return (
     <div className="input-container" role="form" aria-label={t.sendLabel}>
-      <div className="flex space-x-2">
+      <div className="flex items-center space-x-2">
+        <button
+          onClick={onMenuClick}
+          className="p-2 text-[#E3742E] hover:bg-white/10 rounded-full transition-colors flex-shrink-0"
+          aria-label={t.menuLabel}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            className="w-6 h-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 4.5v15m7.5-7.5h-15"
+            />
+          </svg>
+        </button>
         <input
           type="text"
           className="input-field"
@@ -49,19 +76,19 @@ export default function ChatInput({
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !loading && sendMessage()}
           placeholder={t.placeholder}
-          disabled={loading}
+          disabled={loading || isOffline}
           aria-label={t.placeholder}
-          aria-disabled={loading}
+          aria-disabled={loading || isOffline}
         />
         <SpeechRecognition
           currentLanguage={currentLanguage}
           onTranscriptChange={setInput}
-          disabled={loading}
+          disabled={loading || isOffline}
         />
         <button
           onClick={() => sendMessage()}
-          disabled={loading || !input.trim()}
-          className={`send-button ${loading || !input.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={loading || !input.trim() || isOffline}
+          className={`send-button ${loading || !input.trim() || isOffline ? 'opacity-50 cursor-not-allowed' : ''}`}
           aria-label={t.sendLabel}
           aria-busy={loading}
         >

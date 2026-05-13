@@ -747,7 +747,7 @@ export default function TaoleiaChat() {
 
   // --- RENDER JSX ---
   return (
-    <div className="relative w-full h-screen max-w-xl mx-auto flex flex-col z-3 app"
+    <div className="relative w-full h-[100dvh] max-w-xl mx-auto flex flex-col z-3 app overflow-hidden"
         style={{
         paddingTop:    'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
@@ -788,38 +788,6 @@ export default function TaoleiaChat() {
       {/* Menu di accessibilità */}
       <AccessibilityMenu />
       
-      {/* Pulsante per aprire il menu delle categorie */}
-      <div 
-        style={{ position: 'fixed', bottom: '80px', right: '16px', zIndex: 60 }}
-      >
-        <button
-          onClick={() => setShowCategoryMenu(true)}
-          className="bg-white hover:bg-gray-100 text-[#0a3b3b] rounded-full p-3.5 shadow-xl focus:outline-none focus:ring-2 focus:ring-[#E3742E] border-2 border-[#E3742E] transition-all duration-200 hover:scale-110"
-          aria-label={
-            currentLanguage === 'en' ? 'Open Category Menu' :
-            currentLanguage === 'fr' ? 'Ouvrir le menu des catégories' :
-            currentLanguage === 'es' ? 'Abrir menú de categorías' :
-            currentLanguage === 'de' ? 'Kategoriemenü öffnen' :
-            'Apri menu categorie'
-          }
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="#E3742E"
-            className="w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 4.5v15m7.5-7.5h-15"
-            />
-          </svg>
-        </button>
-      </div>
-      
       {/* Menu delle categorie */}
       <CategoryMenu
              isVisible={showCategoryMenu}
@@ -841,11 +809,11 @@ export default function TaoleiaChat() {
 
       {/* Video con bordi arrotondati - dimensioni ridotte - nascosto quando il menu categorie è aperto */}
       {!showCategoryMenu && (
-        <div className="absolute top-0 left-0 w-full h-[25vh] z-50 overflow-hidden rounded-3xl p-3">
+        <div className="absolute top-4 left-4 right-4 h-[30vh] z-50 overflow-hidden rounded-[2rem] shadow-2xl border border-white/20 bg-black/10 backdrop-blur-md">
           <VideoPlayer
             videoUrl="/parla.mp4"
             isPlaying={isPlaying && !showCategoryMenu}
-            className="object-cover w-full h-full"
+            className="object-cover w-full h-80"
             isMuted={true}
           />
           
@@ -859,7 +827,7 @@ export default function TaoleiaChat() {
       )}
       
       {/* Dropdown delle lingue */}
-      <div className="absolute top-4 right-4 z-100">
+      <div className="absolute top-8 right-8 z-[100]">
         <LanguageSelector
           currentLanguage={currentLanguage}
           onLanguageChange={handleSpeechLanguageChange}
@@ -867,18 +835,20 @@ export default function TaoleiaChat() {
       </div>
 
       {/* Pulsante toggle audio */}
-      <AudioToggle 
-        isAudioEnabled={isAudioEnabled}
-        onToggle={toggleAudioEnabled}
-      />
+      <div className="absolute top-8 left-8 z-[100]">
+        <AudioToggle 
+          isAudioEnabled={isAudioEnabled}
+          onToggle={toggleAudioEnabled}
+        />
+      </div>
 
       {/* Contenuti che scorrono sotto il video */}
-      <div className="flex flex-col pt-[25vh] h-full rounded-full">
+      <div className="flex flex-col pt-[30vh] h-full">
         {/* Area dinamica */}
         <div className="relative flex-1">
           {/* CHAT */}
           {activeTab === 'chat' && (
-            <div className="absolute inset-0 overflow-y-auto px-4 py-3 space-y-3" role="list" aria-live="polite">
+            <div className="absolute inset-0 overflow-y-auto px-4 py-3" role="list" aria-live="polite">
               <ChatMessages
                 messages={messages}
                 onCategoryClick={(clickedText) => {
@@ -934,58 +904,41 @@ export default function TaoleiaChat() {
 
         {/* Input bar (solo in chat) */}
         {activeTab === 'chat' && (
-          <div className="input-container">
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                className="input-field"
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && !loading && sendMessage()}
-                placeholder="Scrivi un messaggio…"
-                disabled={loading || isOffline}
-                aria-label="Messaggio di testo"
-              />
-              <SpeechRecognition
-                currentLanguage={currentLanguage}
-                onTranscriptChange={setInput}
-                disabled={loading || isOffline}
-              />
-              <button
-                onClick={() => sendMessage()}
-                disabled={loading || !input.trim() || isOffline}
-                className={`send-button ${loading || !input.trim() || isOffline ? 'opacity-50 cursor-not-allowed' : ''}`}
-                aria-label="Invia messaggio"
-              >
-                ➤
-              </button>
-            </div>
-            
-            {/* I suggerimenti di chat sono stati rimossi come richiesto */}
-          </div>
+          <ChatInput
+            input={input}
+            setInput={setInput}
+            loading={loading}
+            sendMessage={sendMessage}
+            currentLanguage={currentLanguage}
+            isOffline={isOffline}
+            onMenuClick={() => setShowCategoryMenu(true)}
+          />
         )}
 
-        {/* Bottom nav arrotondata */}
-        {/* <nav className="nav-bar">
+        {/* Bottom nav temporaneamente nascosta */}
+        {/* 
+        <nav className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-[#0a3b3b]/90 backdrop-blur-lg rounded-full px-6 py-3 flex items-center space-x-8 shadow-2xl border border-white/10 z-[60]">
+          <button 
+            onClick={() => setActiveTab('chat')} 
+            className={`transition-all duration-300 ${activeTab === 'chat' ? 'scale-125' : 'opacity-50 hover:opacity-80'}`}
+            aria-label="Chat"
+          >
+            <CodeBracketIcon
+              className={`w-6 h-6 ${activeTab === 'chat' ? 'text-[#E3742E]' : 'text-white'}`}
+            />
+          </button>
           
           <button 
             onClick={() => setActiveTab('location')} 
-            className={`nav-button ${activeTab === 'location' ? 'active' : ''}`}
+            className={`transition-all duration-300 ${activeTab === 'location' ? 'scale-125' : 'opacity-50 hover:opacity-80'}`}
+            aria-label="Mappa"
           >
             <MapPinIcon
-              className={`nav-icon ${activeTab === 'location' ? 'text-[#E3742E]' : 'text-[#F5EFE0]'}`}
+              className={`w-6 h-6 ${activeTab === 'location' ? 'text-[#E3742E]' : 'text-white'}`}
             />
           </button>
-          
-          <button 
-            onClick={() => setActiveTab('chat')} 
-            className={`nav-button ${activeTab === 'chat' ? 'active' : ''}`}
-          >
-            <CodeBracketIcon
-              className={`nav-icon ${activeTab === 'chat' ? 'text-[#E3742E]' : 'text-[#F5EFE0]'}`}
-            />
-          </button>
-        </nav> */}
+        </nav>
+        */}
       </div>
     </div>
 );

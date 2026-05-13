@@ -164,7 +164,7 @@ export default function ActivityCard({
 
   return (
     <div 
-      className="max-w-md w-full bg-white border border-gray-200 rounded-lg shadow-md flex flex-col max-h-[100vh]"
+      className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-black/5 flex flex-col overflow-hidden"
       role="article"
       aria-label={name}
     >
@@ -172,7 +172,7 @@ export default function ActivityCard({
       {/* Carousel immagini */}
       {total > 0 && (
         <div 
-          className="relative overflow-hidden h-[250px]" /* Altezza fissa per tutte le immagini */
+          className="relative overflow-hidden h-[200px] sm:h-[250px]"
           role="region"
           aria-roledescription="carousel"
           aria-label="Galleria immagini"
@@ -231,8 +231,8 @@ export default function ActivityCard({
       )}
 
       <div className="p-4 flex-1 overflow-y-auto">
-        <h2 className="text-xl font-bold mb-2 text-gray-900">{name}</h2>
-        <p className="text-gray-700 mb-4">
+        <h2 className="text-xl font-semibold mb-1 text-gray-900">{name}</h2>
+        <p className="text-gray-600 text-sm mb-4 leading-relaxed">
           {onCategoryClick ? (
             <ClickableCategory onCategoryClick={onCategoryClick}>
               {description}
@@ -244,32 +244,31 @@ export default function ActivityCard({
 
         {/* Menu */}
         {menu && (
-          <div className="my-4 border-t pt-4">
-            <div className="font-medium mb-2 text-gray-800">{translations.menu[currentLang]}</div>
-            <div className="text-gray-700">{menu}</div>
+          <div className="my-4 border-t border-black/5 pt-4">
+            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{translations.menu[currentLang]}</div>
+            <div className="text-gray-700 text-sm bg-gray-50 p-3 rounded-xl border border-black/5">{menu}</div>
           </div>
         )}
 
         {/* Prezzi */}
         {prices && (
-          <div className="my-4 border-t pt-4">
-            <div className="font-medium mb-2 text-gray-800">{translations.prices[currentLang]}</div>
-            <div className="text-gray-700">{prices}</div>
+          <div className="my-4 border-t border-black/5 pt-4">
+            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{translations.prices[currentLang]}</div>
+            <div className="text-[#E3742E] font-semibold text-lg">{prices}</div>
           </div>
         )}
 
         {/* Audio guida */}
         {audio_guide_text && (
-          <div className="my-4 border-t pt-4">
+          <div className="my-4 border-t border-black/5 pt-4">
             <div className="flex items-center justify-between mb-3">
-              <div className="font-medium text-gray-800 flex items-center gap-2">
-                <span className="text-lg">🎧</span>
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 {translations.audioGuide[currentLang]}
               </div>
               <button
                 onClick={handlePlayAudioGuide}
                 disabled={!isAudioEnabled || isAudioLoading}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                className={`flex items-center gap-2 px-4 py-2 text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 ${isPlaying ? 'bg-[#E3742E]' : 'bg-[#0a3b3b]'}`}
                 aria-label={isPlaying ? `${translations.pause[currentLang]} audio guida` : translations.listenMore[currentLang]}
               >
                 {isAudioLoading ? (
@@ -284,14 +283,14 @@ export default function ActivityCard({
                 </span>
               </button>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
-              <p className="text-gray-700 leading-relaxed">
+            <div className="bg-gray-50 rounded-xl p-4 border border-black/5">
+              <p className="text-gray-600 text-sm leading-relaxed italic">
                 {getDisplayedAudioText(audio_guide_text)}
               </p>
               {audio_guide_text && audio_guide_text.length > 150 && (
                 <button
                   onClick={() => setShowFullAudioText(!showFullAudioText)}
-                  className="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium underline transition-colors"
+                  className="mt-3 text-[#E3742E] hover:text-[#c45e1f] text-sm font-medium underline transition-colors"
                 >
                   {showFullAudioText 
                     ? translations.showLess[currentLang] 
@@ -303,55 +302,67 @@ export default function ActivityCard({
           </div>
         )}
 
-        <div className="text-gray-800 mb-4 space-y-1 text-sm" role="list" aria-label="Informazioni di contatto">
-          <div role="listitem"><span className="font-medium">{translations.address[currentLang]}:</span> {address}</div>
-          {phone_number && (
-            <div role="listitem">
-              <span className="font-medium">{translations.phone[currentLang]}:</span>{' '}
-              <a href={`tel:${phone_number}`} className="text-blue-600 hover:underline" aria-label={`${translations.phone[currentLang]}: ${phone_number}`}>
-                {phone_number}
-              </a>
+        {/* Info contatto */}
+        <div className="mt-4 pt-4 border-t border-black/5 space-y-3">
+          {address && (
+            <div className="flex items-start">
+              <div className="w-5 h-5 text-gray-400 mr-3 mt-0.5">📍</div>
+              <div className="flex-1">
+                <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-tight">{translations.address[currentLang]}</div>
+                <div className="text-sm text-gray-700">{address}</div>
+                {google_maps_url && (
+                  <a 
+                    href={google_maps_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-[#0a3b3b] font-medium hover:underline mt-1 inline-block"
+                  >
+                    {translations.map[currentLang]}
+                  </a>
+                )}
+              </div>
             </div>
           )}
-          {email && (
-            <div role="listitem">
-              <span className="font-medium">{translations.email[currentLang]}:</span>{' '}
-              <a href={`mailto:${email}`} className="text-blue-600 hover:underline" aria-label={`${translations.email[currentLang]}: ${email}`}>
-                {email}
-              </a>
-            </div>
-          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            {phone_number && (
+              <div className="flex items-start">
+                <div className="w-5 h-5 text-gray-400 mr-2">📞</div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-tight">{translations.phone[currentLang]}</div>
+                  <a href={`tel:${phone_number}`} className="text-xs text-gray-700 hover:text-[#0a3b3b] block truncate">{phone_number}</a>
+                </div>
+              </div>
+            )}
+
+            {email && (
+              <div className="flex items-start">
+                <div className="w-5 h-5 text-gray-400 mr-2">✉️</div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-tight">{translations.email[currentLang]}</div>
+                  <a href={`mailto:${email}`} className="text-xs text-gray-700 hover:text-[#0a3b3b] block truncate">{email}</a>
+                </div>
+              </div>
+            )}
+          </div>
+
           {website && (
-            <div role="listitem">
-              <span className="font-medium">{translations.website[currentLang]}:</span>{' '}
-              <a 
-                href={website.startsWith('http') ? website : `https://${website}`} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-blue-600 hover:underline"
-                aria-label={`${translations.website[currentLang]}: ${website}`}
-              >
-                {website}
-              </a>
+            <div className="flex items-start pt-1">
+              <div className="w-5 h-5 text-gray-400 mr-3">🌐</div>
+              <div className="flex-1">
+                <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-tight">{translations.website[currentLang]}</div>
+                <a 
+                  href={website.startsWith('http') ? website : `https://${website}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-[#0a3b3b] font-medium hover:underline truncate block"
+                >
+                  {website.replace(/^https?:\/\//, '')}
+                </a>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Link a Google Maps */}
-        {google_maps_url && (
-          <a 
-            href={google_maps_url} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="inline-flex items-center text-blue-600 hover:underline"
-            aria-label={translations.map[currentLang]}
-          >
-            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-            </svg>
-            {translations.map[currentLang]}
-          </a>
-        )}
       </div>
     </div>
   );
